@@ -5,29 +5,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <style>
-        .div1 {
-            width: 240px;
-            height: 240px;
-            background: rgb(45, 7, 116);
-            float: left;
-        }
-        .div2 {
-            width: 60px;
-            height: 60px;
-            background: rgb(150, 201, 12);
-            float: left;
-        }
-        .div3 {
-            width: 60px;
-            height: 60px;
-            background: rgb(214, 66, 21);
-            float: left;
-        }
+     #heading div {
+        display: flex;
+        justify-content: space-between;
+     }
+     * {
+        margin: 0;
+        padding: 0;
+     }
+     #heading .h2 {
+        font-size: 20px;
+        text-transform: uppercase;
+        padding: 15px;
+     }
+     #heading a {
+        color: #fff;
+        text-decoration: none;
+        font-family: sans-serif;
+     }
+     .h2 {
+        
+     }
+     body {
+        background-image: url(https://img.freepik.com/vetores-gratis/formas-geometricas-gradientes-em-fundo-escuro_23-2148423541.jpg?w=1380&t=st=1715525334~exp=1715525934~hmac=de3188ddbbe709e66819b9eabf69ac1d295e98b1800f5108d93eee91ccb117f5);
+        background-size: cover;
+        background-position: top center;
+     }
+     #heading {
+      background: rgba(0,0,0, 0.7);
+     }
     </style>
 </head>
 <body>
-    <div class="div1"></div>
-    <div class="div2"></div>
-    <div class="div3"></div>
+<header id="heading">
+    <div>
+        <h1 class="h2"><a href="...">Netflix</a></h1>
+        <h2 class="h2"><a href="...">entrar</a></h2>
+    </div>
+</header>
 </body>
 </html>
