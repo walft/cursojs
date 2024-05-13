@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+        table {
+            border-collapse: collapse;
+        }
+        table td, table th {
+            border: 1px solid grey;
+            padding: 5px;
+            text-align: center;
+        }
+        table caption {
+            caption-side: top;
+            font-style: italic;
+            font-size: 14px;
+            background-color: rgba(110, 105, 105, 0.7);
+        }
+        table tfoot {
+            background-color: rgba(238, 240, 154, 0.7);
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .responsive-table {
+            overflow: scroll;
+            max-width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="responsive-table">
+    <table>
+        <caption>
+          Dados sobre os planetas do nosso sistema solar (fatos planetários retirados
+          da
+          <a href="http://nssdc.gsfc.nasa.gov/planetary/factsheet/" class="external" target="_blank">Planilha Planetária da Nasa - Métrica</a>
+          .
+        </caption>
+        <thead>
+          <tr>
+            <td colspan="2"></td>
+            <th scope="col">Nome</th>
+            <th scope="col">Massa (10 <sup>24</sup> kg)</th>
+            <th scope="col">Diâmetro (km)</th>
+            <th scope="col">Densidade (kg/m <sup>3</sup> )</th>
+            <th scope="col">Gravidade (m/s<sup>2</sup>)</th>
+            <th scope="col">Duração do dia (hours)</th>
+            <th scope="col">Distancia do Sol (10<sup>6</sup>km)</th>
+            <th scope="col">Temperatura Média (°C)</th>
+            <th scope="col">Fases da Lua</th>
+            <th scope="col">Anotações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th colspan="2" rowspan="4" scope="rowgroup">Planetas Terrestres</th>
+            <th scope="row">Mercúrio</th>
+            <td>0.330</td>
+            <td>4,879</td>
+            <td>5427</td>
+            <td>3.7</td>
+            <td>4222.6</td>
+            <td>57.9</td>
+            <td>167</td>
+            <td>0</td>
+            <td>Proximidade do Sol</td>
+          </tr>
+          <tr>
+            <th scope="row">Venus</th>
+            <td>4.87</td>
+            <td>12,104</td>
+            <td>5243</td>
+            <td>8.9</td>
+            <td>2802.0</td>
+            <td>108.2</td>
+            <td>464</td>
+            <td>0</td>
+            <td></td>
+          </tr>
+          <tr>
+            <th scope="row">Terra</th>
+            <td>5.97</td>
+            <td>12,756</td>
+            <td>5514</td>
+            <td>9.8</td>
+            <td>24.0</td>
+            <td>149.6</td>
+            <td>15</td>
+            <td>1</td>
+            <td>Nosso Planeta</td>
+          </tr>
+          <tr>
+            <th scope="row">Marte</th>
+            <td>0.642</td>
+            <td>6,792</td>
+            <td>3933</td>
+            <td>3.7</td>
+            <td>24.7</td>
+            <td>227.9</td>
+            <td>-65</td>
+            <td>2</td>
+            <td>O Planeta Vermelho</td>
+          </tr>
+          <tr>
+            <th rowspan="4" scope="rowgroup">Planetas Jovianos</th>
+            <th rowspan="2" scope="rowgroup">Gigantes Gasosos</th>
+            <th scope="row">Jupiter</th>
+            <td>1898</td>
+            <td>142,984</td>
+            <td>1326</td>
+            <td>23.1</td>
+            <td>9.9</td>
+            <td>778.6</td>
+            <td>-110</td>
+            <td>67</td>
+            <td>O Maior Planeta</td>
+          </tr>
+          <tr>
+            <th scope="row">Saturno</th>
+            <td>568</td>
+            <td>120,536</td>
+            <td>687</td>
+            <td>9.0</td>
+            <td>10.7</td>
+            <td>1433.5</td>
+            <td>-140</td>
+            <td>62</td>
+            <td></td>
+          </tr>
+          <tr>
+            <th rowspan="2" scope="rowgroup">Gigante de gelo</th>
+            <th scope="row">Urano</th>
+            <td>86.8</td>
+            <td>51,118</td>
+            <td>1271</td>
+            <td>8.7</td>
+            <td>17.2</td>
+            <td>2872.5</td>
+            <td>-195</td>
+            <td>27</td>
+            <td></td>
+          </tr>
+          <tr>
+            <th scope="row">Netuno</th>
+            <td>102</td>
+            <td>49,528</td>
+            <td>1638</td>
+            <td>11.0</td>
+            <td>16.1</td>
+            <td>4495.1</td>
+            <td>-200</td>
+            <td>14</td>
+            <td></td>
+          </tr>
+          <tr>
+            <th colspan="2" scope="rowgroup">Planeta Anão</th>
+            <th scope="row">Plutão</th>
+            <td>0.0146</td>
+            <td>2,370</td>
+            <td>2095</td>
+            <td>0.7</td>
+            <td>153.3</td>
+            <td>5906.4</td>
+            <td>-225</td>
+            <td>5</td>
+            <td>
+              Desconsiderado como planeta desde 2006, mas isto
+              <a href="http://www.usatoday.com/story/tech/2014/10/02/pluto-planet-solar-system/16578959/" class="external" target="_blank">permanece controverso</a>.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+</body>
+</html>
