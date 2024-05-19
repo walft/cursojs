@@ -1,6 +1,12 @@
-.pai .lista li:first-child {
-    background-color: brown;
+ul li:nth-child(even) {
+    background-color: blueviolet;
 }
-.pai .lista li:last-child {
-    background-color: brown;
+ul li:nth-child(odd) {
+    background-color: chartreuse;
+}
+ul li:nth-child(3n) {
+    background-color: black;
+}
+ul li:nth-child(3n + 5) {
+    background-color: black;
 }
