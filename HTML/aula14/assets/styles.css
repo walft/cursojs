@@ -1,0 +1,9 @@
+budy#b.bclass p#p.p {
+    background-color: deeppink;
+}
+#p {
+    background-color: red;
+}
+.p {
+    background-color: yellow !important; 
+}
