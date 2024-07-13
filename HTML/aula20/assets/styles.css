@@ -15,9 +15,14 @@
 }
 .filha2 {
     background-color: greenyellow;
+    position: absolute;
+    z-index: 1;
 }
 .filha1 {
-    bottom: 100px;
-    left: 50px;
+    top: 50%;
+    margin-top: -150px;
+    left: 50%;
     position: absolute;
+    margin-left: -150px;
+    z-index: 2;
 }
