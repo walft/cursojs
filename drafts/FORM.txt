@@ -1,0 +1,1059 @@
+FORM cria_planilha .
+  DATA: lstr_orderout2 LIKE LINE OF gcol_orderout,
+        v_name_order   LIKE thead-tdname,
+        v_tabix        LIKE sy-tabix,       " amss 23/10/2023
+        v_fenum        TYPE qmfe-fenum,     " amss 18/10/2023
+        v_qmnum        TYPE qmfe-qmnum,     " amss 18/10/2023
+        v_name_ope     LIKE thead-tdname,
+** INÍCIO - 12.08.2021 11:16:52 - ABAPD94R
+        v_name_con     LIKE thead-tdname,
+        v_name_trf     LIKE thead-tdname,
+        v_name_doc     LIKE thead-tdname,
+** FIM - 12.08.2021 11:16:52 - ABAPD94R
+        ti_lines       LIKE tline OCCURS 0 WITH HEADER LINE,
+        v_id           LIKE thead-tdid,
+        v_object       LIKE thead-tdobject.
+  DATA: it_aux_o TYPE  ty_orderout,   " tab. auxiliar para tratamento do txt longo
+        it_aux_n TYPE  ty_noteout,    " tab. auxiliar para tratamento do txt longo
+        it_aux_m TYPE  ty_med,        " tab. auxiliar para tratamento do txt longo
+        it_aux_p TYPE  ty_operacoes.  " tab. auxiliar para tratamento do txt longo
+  DATA: lc_txt_str TYPE string,       " variavel para concatenar txt longo
+        lc_cont    TYPE n.               " Contador para string do txt longo
+
+  " xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  " DEFINIÇÃO DOS CAMPOS E ORDENAÇÃO DOS DADOS A SEREM EXPORTADOS (FIELDCATALOG e SORT) DE ACORDO COM O TIPO DE EXECUÇÃO (BACKGROUND OU ON-LINE) - INÍCIO
+  " xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  " Se a exportação é VIA EXECUÇÃO ON-LINE (via ALV) [gv_export_online_or_backgrd = ABAP_TRUE]
+  IF gv_export_online_or_backgrd = abap_true.
+    " Se o objeto gr_grid da ALV estiver instanciado, atualiza o catálogo com alterações efetuadas pelo usuário durante a execução para a exportação
+    " SENÃO se estiver NÃO-INSTANCIADO, retorna (cenário pouco provável que durante a execução ON-LINE o objeto gr_grid estar não-INSTANCIADO)
+    IF gr_grid IS NOT INITIAL.
+      gr_grid->get_frontend_fieldcatalog( IMPORTING et_fieldcatalog = git_fieldcat ).
+    ELSE.
+      RETURN.
+    ENDIF.
+
+    " Se a exportação é VIA EXECUÇÃO BACKGROUND [gv_export_online_or_backgrd = ABAP_FALSE] e POR PLANILHA [gv_export_bkg_spool_or_wsheet = ABAP_FALSE]
+    " Obs.: O cenário de exportação VIA EXECUÇÃO BACKGROUND [gv_export_online_or_backgrd = ABAP_FALSE] e POR SPOOL [gv_export_bkg_spool_or_wsheet = ABAP_TRUE] não realiza exportação
+  ELSEIF gv_export_online_or_backgrd = abap_false AND gv_export_bkg_spool_or_wsheet = abap_false.
+    DATA: ls_report_curr    TYPE ltdx-report,
+          ls_ltvariant_curr TYPE ltdx-variant.
+    DATA: ls_ltvariantkey_curr  TYPE ltdxkey.
+
+    DATA: lt_fcat_curr TYPE STANDARD TABLE OF ltdxdata,
+          ls_fcat_curr TYPE ltdxdata,
+          lt_sort_curr TYPE STANDARD TABLE OF ltdxdata,
+          ls_sort_curr TYPE ltdxdata.
+    DATA: ti_dfies_tab TYPE TABLE OF dfies.
+
+    " Se foi informado VARIANTE DE EXIBIÇÃO DA TELA DE SELEÇÃO (gstr_lvaria-variant), define-a como a VARIANTE DE EXIBIÇÃO CORRENTE
+    IF gstr_lvaria-variant IS NOT INITIAL.
+      ls_report_curr    = sy-repid.                                                            " Seta o programa/report em execução (SY-CPROG)
+      ls_ltvariant_curr = gstr_lvaria-variant.                                                 " Há uma conversão de dados nesta atribuição
+      " Senão, se NÃO foi informado VARIANTE DE EXIBIÇÃO DA TELA DE SELEÇÃO, define a VARIANTE DE EXIBIÇÃO DEFAULT do programa/report em execução como a VARIANTE DE EXIBIÇÃO CORRENTE
+    ELSE.
+      DATA: lstr_default_layout_info TYPE salv_s_layout_info,
+            lstr_layout_key          TYPE salv_s_layout_key.
+      lstr_layout_key-report    = sy-repid.                                                           " Seta o programa/report em execução
+      lstr_default_layout_info  = cl_salv_layout_service=>get_default_layout( lstr_layout_key ).      " Busca VARIANTE DE EXIBIÇÃO DEFAULT do programa/report
+      ls_report_curr            = sy-repid.                                                           " Seta o programa/report em execução (SY-CPROG)
+      ls_ltvariant_curr         = lstr_default_layout_info-layout.
+    ENDIF.
+
+    " Define a chave da VARIANTE DE EXIBIÇÃO CORRENTE (ls_ltvariantkey_curr) para busca do FieldCatalog, Sort e Filter do relatório
+    SELECT SINGLE report handle log_group username variant type "#EC CI_NOORDER or "#EC WARNOK
+      INTO ls_ltvariantkey_curr                                  " CONCATENAÇÃO DIRETA dos campos para montar a chave
+      FROM ltdx
+     WHERE relid   = 'LT'
+       AND report  = ls_report_curr             " Nome do programa/report em execução
+       AND variant = ls_ltvariant_curr.         " VARIANTE DE EXIBIÇÃO CORRENTE
+
+    " Busca o FieldCatalog, Sort e Filter do relatório da VARIANTE DE EXIBIÇÃO CORRENTE (ls_ltvariant_curr) a partir da sua chave (ls_ltvariantkey_curr)
+    CALL FUNCTION 'LT_DBDATA_READ_FROM_LTDX'
+      EXPORTING
+        "i_tool       = 'LT'          DEFAULT 'LT'
+        is_varkey    = ls_ltvariantkey_curr
+      TABLES
+        t_dbfieldcat = lt_fcat_curr
+        t_dbsortinfo = lt_sort_curr
+        "t_dbfilter   = lt_filt_curr         " NÃO UTILIZADO NO CONTEXTO ATUAL
+      EXCEPTIONS
+        not_found    = 1
+        wrong_relid  = 2
+        OTHERS       = 3.
+    IF sy-subrc = 0.
+      " ........................................................................................................................................................
+      " Altera a Posição, Visibilidade e Tamanho dos campos a serem exportados para a PLANILHA de acordo com o FieldCatalogo da VARIANTE DE EXIBIÇÃO CORRENTE
+      " ........................................................................................................................................................
+      " Percorre cada campo do FieldCatalog ORIGINAL (criado no início do relatório) e o altera de acordo com o FieldCatalog da VARIANTE DE EXIBIÇÃO CORRENTE (lt_fcat_curr)
+      LOOP AT git_fieldcat ASSIGNING FIELD-SYMBOL(<lstr_fieldcat>).
+        " Percorre a ITable de FieldCatalog da VARIANTE DE EXIBIÇÃO CORRENTE (lt_fcat_curr) para definir os atributos que serão relevantes para a PLANILHA
+        LOOP AT lt_fcat_curr INTO DATA(l_wa_fcat_curr)
+          WHERE key1 = <lstr_fieldcat>-fieldname AND ( param = 'COL_POS' OR param = 'NO_OUT' OR param = 'OUTPUTLEN' ) .
+          CASE l_wa_fcat_curr-param.
+            WHEN 'COL_POS'.
+              <lstr_fieldcat>-col_pos = l_wa_fcat_curr-value.
+            WHEN 'NO_OUT'.
+              <lstr_fieldcat>-no_out = l_wa_fcat_curr-value.
+              " Se a coluna será apresentada na exportação da PLANILHA, busca seu DATATYPE de acordo com o campo e a tabela de referência (ref_field e ref_table)
+              IF l_wa_fcat_curr-value = abap_false.
+                " Busca o tipo de dados do campo e tabela da coluna do FieldCatalog (IMPORTANTE para montar os estilos e convertes os dados no XLS/XML a ser exportado)
+                REFRESH ti_dfies_tab[].
+                CALL FUNCTION 'DDIF_FIELDINFO_GET'
+                  EXPORTING
+                    tabname   = <lstr_fieldcat>-ref_table
+                    fieldname = <lstr_fieldcat>-ref_field
+                  TABLES
+                    dfies_tab = ti_dfies_tab
+                  EXCEPTIONS
+                    OTHERS    = 1.
+                IF sy-subrc = 0.
+                  READ TABLE ti_dfies_tab[] INTO DATA(wa_dfies_tab) INDEX 1.
+                  IF sy-subrc = 0.
+                    <lstr_fieldcat>-datatype = wa_dfies_tab-datatype.
+                  ENDIF.
+                ENDIF.
+              ENDIF.
+            WHEN 'OUTPUTLEN'.
+              <lstr_fieldcat>-outputlen = l_wa_fcat_curr-value.
+          ENDCASE.
+        ENDLOOP.
+      ENDLOOP.
+
+      " ORDENA o FieldCatalog ORIGINAL (git_fieldcat) pela coluna col_pos para que na PLANILHA as colunas/campos estejam na sequência definida na VARIANTE DE EXIBIÇÃO CORRENTE
+      SORT git_fieldcat BY no_out ASCENDING col_pos ASCENDING.
+
+      " ...........................................................................................................................................
+      " Altera a ORDENAÇÃO DOS DADOS a serem exportados para a PLANILHA de acordo com o SORT da VARIANTE DE EXIBIÇÃO CORRENTE (lt_sort_curr)
+      " ...........................................................................................................................................
+      DATA: lt_bkg_wsheet_sortorder TYPE                   abap_sortorder_tab,
+            ls_bkg_wsheet_sortorder LIKE LINE OF           lt_bkg_wsheet_sortorder.
+      " Remove todas as linhas irrelevantes da ITable de SORT da VARIANTE DE EXIBIÇÃO CORRENTE (lt_sort_curr) para construção da ITable de ordenação final (lt_bkg_wsheet_sortorder)
+      DELETE lt_sort_curr WHERE param <> 'SPOS' AND param <> 'DOWN'.
+
+      " Ordena a a ITable de SORT da VARIANTE DE EXIBIÇÃO CORRENTE (lt_sort_curr) para que as primeiras linhas sejam os campos do SORT final na sequência desejada, as outras linhas serão ref a ASC/DESC
+      SORT lt_sort_curr BY param DESCENDING value ASCENDING.
+
+      " Percorre a ITable de SORT da VARIANTE DE EXIBIÇÃO CORRENTE (lt_sort_curr) e monta uma ITable de ordenação final (lt_bkg_wsheet_sortorder)
+      LOOP AT lt_sort_curr INTO ls_sort_curr.
+        " Sort by given column in a stable way
+        ls_bkg_wsheet_sortorder-name       = ls_sort_curr-key1.
+
+        " Se for PARAM = SPOS adiciona nova linha ref ao campo na ITable de ordenação final (lt_bkg_wsheet_sortorder)
+        IF ls_sort_curr-param = 'SPOS'.
+          ls_bkg_wsheet_sortorder-astext     = abap_false.
+          ls_bkg_wsheet_sortorder-descending = abap_false.
+          APPEND ls_bkg_wsheet_sortorder TO lt_bkg_wsheet_sortorder.
+          " Senão (se não for PARAM = SPOS), é PARAM = 'DOWN' e definido como DESCENDING (value = TRUE) busca a linha do respectivo campo para atualizar o ASC/DESC como DESCENDING (=TRUE)
+        ELSE.
+          IF ls_sort_curr-param = 'DOWN' AND ls_sort_curr-value = abap_true.
+            ls_bkg_wsheet_sortorder-astext     = abap_false.
+            ls_bkg_wsheet_sortorder-descending = abap_true.
+            MODIFY lt_bkg_wsheet_sortorder FROM ls_bkg_wsheet_sortorder TRANSPORTING descending WHERE name = ls_bkg_wsheet_sortorder-name.
+          ENDIF.
+        ENDIF.
+      ENDLOOP.
+    ENDIF.
+  ENDIF.
+
+  " Se não tem fieldcatalog retorna
+  IF git_fieldcat[] IS INITIAL.
+    RETURN.
+  ENDIF.
+  " xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  " DEFINIÇÃO DOS CAMPOS E ORDENAÇÃO DOS DADOS A SEREM EXPORTADOS (FIELDCATALOG e SORT) DE ACORDO COM O TIPO DE EXECUÇÃO (BACKGROUND OU ON-LINE) - FIM
+  " xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+  " ===============================================================================================================================
+  " Exporta e exibe de acordo com o Tipo de Filtro setado (radiobutton rb_order, rb_note ou rb_med, rb_dem)
+  " ===============================================================================================================================
+  DATA: obj_xml         TYPE REF TO cl_ti_excel.        " INICIALIZAÇÃO DO XML [DECLARAÇÃO]
+  CREATE OBJECT obj_xml. " INICIALIZAÇÃO DO XML [INSTANCIAÇÃO]
+
+** INÍCIO - 23.08.2021 17:10:13 - ABAPD94R
+  IF gv_doc = 'X'.
+    CLEAR: it_excel_doc, ti_lines.
+
+*    " Ordena a ITable dos dados que serão exportados POR PLANILHA a partir da ITable de ordenação final (lt_bkg_wsheet_sortorder) [Cenário de exportação VIA EXECUÇÃO BACKGROUND e POR PLANILHA]
+*    IF lt_bkg_wsheet_sortorder[] IS NOT INITIAL.
+*      SORT gcol_operacoesout[] BY (lt_bkg_wsheet_sortorder).      " Sintaxe SORT com ITable do tipo abap_sortorder_tab declarada
+*    ENDIF.
+
+    LOOP AT gt_data INTO DATA(ls_aux_doc) WHERE selected = 'X'.
+      CLEAR: v_name_ope, lc_txt_str, lc_cont.
+
+      MOVE-CORRESPONDING ls_aux_doc TO it_excel_doc.
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      " TEXTO LONGO
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      CLEAR it_excel_doc-txt_longo.
+
+*      IF it_aux_c-char01 IS NOT INITIAL AND gv_export_wsheet_ltext = ABAP_TRUE.
+*        CONCATENATE sy-mandt it_aux_c-rueck it_aux_c-rmzhl INTO v_name_con.
+
+      v_name_doc = ls_aux_doc-mdocm.
+
+      CALL FUNCTION 'READ_TEXT'
+        EXPORTING
+          id                      = 'LTXT'
+          language                = sy-langu
+          name                    = v_name_doc
+          object                  = 'IMRG'
+        TABLES
+          lines                   = ti_lines
+        EXCEPTIONS
+          id                      = 1
+          language                = 2
+          name                    = 3
+          not_found               = 4
+          object                  = 5
+          reference_check         = 6
+          wrong_access_to_archive = 7
+          OTHERS                  = 8.
+
+      IF sy-subrc <> 0.
+*          MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*          WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+      ELSE.
+        CLEAR lc_txt_str.
+
+        LOOP AT ti_lines.
+
+          IF lc_cont < 150.
+            CONCATENATE lc_txt_str ti_lines-tdline cl_abap_char_utilities=>cr_lf INTO lc_txt_str.
+            lc_cont = lc_cont + 1.
+          ENDIF.
+
+        ENDLOOP.
+        CLEAR lc_cont.
+      ENDIF.
+      it_excel_doc-txt_longo = lc_txt_str.
+*      ENDIF.
+
+      APPEND it_excel_doc.
+    ENDLOOP.
+
+    obj_xml->export_to_wsheet( it_excel_doc[] ).
+
+    CLEAR: it_excel_doc. REFRESH: it_excel_doc.
+
+** FIM - 23.08.2021 17:10:13 - ABAPD94R
+
+    " ..........................................................................
+    " ORDENS ou Demandas:ORDENS sem Nota e sem Medida (dy_dor)
+    " ..........................................................................
+** INÍCIO - 23.08.2021 17:11:27 - ABAPD94R
+*  IF ( rb_order = 'X' ). " OR ( rb_dem = 'X' AND dy_dor = 'X' ).                " ### REMOÇÃO tipo DEMANDAS (rb_dem) - INÍCIO e FIM ###
+  ELSEIF ( rb_order = 'X' ). " OR ( rb_dem = 'X' AND dy_dor = 'X' ).                " ### REMOÇÃO tipo DEMANDAS (rb_dem) - INÍCIO e FIM ###
+* * FIM - 23.08.2021 17:11:27 - ABAPD94R
+    CLEAR: it_excel_o, it_aux_o, ti_lines.
+
+    " Ordena a ITable dos dados que serão exportados POR PLANILHA a partir da ITable de ordenação final (lt_bkg_wsheet_sortorder) [Cenário de exportação VIA EXECUÇÃO BACKGROUND e POR PLANILHA]
+    IF lt_bkg_wsheet_sortorder[] IS NOT INITIAL.
+      SORT gcol_orderout[] BY (lt_bkg_wsheet_sortorder).      " Sintaxe SORT com ITable do tipo abap_sortorder_tab declarada
+    ENDIF.
+
+    LOOP AT gcol_orderout INTO it_aux_o WHERE selected = 'X'.
+      CLEAR: v_name_order, lc_txt_str, lc_cont.
+
+      MOVE-CORRESPONDING it_aux_o TO it_excel_o.
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      " TEXTO LONGO DA ORDEM
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      CLEAR it_excel_o-txt_longo.
+
+      " Se a Ordem tem texto longo e se for exportação POR PLANILHA COM TEXTO LONGO (TRUE), busca e armazena o texto longo na planilha a ser exportada
+      IF it_aux_o-ltext IS NOT INITIAL AND gv_export_wsheet_ltext = abap_true.
+        CONCATENATE sy-mandt it_aux_o-aufnr INTO v_name_order.
+
+        CALL FUNCTION 'READ_TEXT'
+          EXPORTING
+            id                      = 'KOPF'
+            language                = sy-langu
+            name                    = v_name_order
+            object                  = 'AUFK'
+          TABLES
+            lines                   = ti_lines
+          EXCEPTIONS
+            id                      = 1
+            language                = 2
+            name                    = 3
+            not_found               = 4
+            object                  = 5
+            reference_check         = 6
+            wrong_access_to_archive = 7
+            OTHERS                  = 8.
+
+        IF sy-subrc <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*         WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+        ELSE.
+          CLEAR lc_txt_str.
+          LOOP AT ti_lines.
+
+            IF lc_cont < 150.
+              CONCATENATE lc_txt_str ti_lines-tdline cl_abap_char_utilities=>cr_lf INTO lc_txt_str.
+              lc_cont = lc_cont + 1.
+            ENDIF.
+
+          ENDLOOP.
+          CLEAR lc_cont.
+        ENDIF.
+        it_excel_o-txt_longo = lc_txt_str.
+      ENDIF.
+
+      APPEND it_excel_o.
+    ENDLOOP.
+
+    obj_xml->export_to_wsheet( it_excel_o[] ).
+
+    CLEAR: it_excel_o. REFRESH: it_excel_o.
+
+
+    " ..........................................................................
+    " NOTAS ou Demandas:NOTAS sem Medida e sem Ordem (dy_dnt)
+    " ..........................................................................
+  ELSEIF ( rb_note = 'X' ). " OR ( rb_dem = 'X' AND dy_dnt = 'X' ).             " ### REMOÇÃO tipo DEMANDAS (rb_dem) - INÍCIO e FIM ###
+    CLEAR: it_excel_n, it_aux_n, ti_lines.
+
+    " Ordena a ITable dos dados que serão exportados POR PLANILHA a partir da ITable de ordenação final (lt_bkg_wsheet_sortorder) [Cenário de exportação VIA EXECUÇÃO BACKGROUND e POR PLANILHA]
+    IF lt_bkg_wsheet_sortorder[] IS NOT INITIAL.
+      SORT gcol_noteout[] BY (lt_bkg_wsheet_sortorder).      " Sintaxe SORT com ITable do tipo abap_sortorder_tab declarada
+    ENDIF.
+
+    LOOP AT gcol_noteout INTO it_aux_n WHERE selected = 'X'.
+      CLEAR: v_name_order, lc_txt_str, lc_cont.
+
+      MOVE-CORRESPONDING it_aux_n TO it_excel_n.
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      " TEXTO LONGO DA NOTA
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      CLEAR it_excel_n-txt_longo.
+
+      " Se a Nota tem texto longo e se for exportação POR PLANILHA COM TEXTO LONGO (TRUE), busca e armazena o texto longo na planilha a ser exportada
+      IF it_aux_n-indtx IS NOT INITIAL AND gv_export_wsheet_ltext = abap_true.
+*           CONCATENATE SY-MANDT IT_AUX_N-QMNUM INTO V_NAME_ORDER.
+        v_name_order = it_aux_n-qmnum.
+        CALL FUNCTION 'READ_TEXT'
+          EXPORTING
+            id                      = 'LTXT'
+            language                = sy-langu
+            name                    = v_name_order
+            object                  = 'QMEL'
+          TABLES
+            lines                   = ti_lines
+          EXCEPTIONS
+            id                      = 1
+            language                = 2
+            name                    = 3
+            not_found               = 4
+            object                  = 5
+            reference_check         = 6
+            wrong_access_to_archive = 7
+            OTHERS                  = 8.
+        IF sy-subrc <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*         WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+        ELSE.
+          CLEAR lc_txt_str.
+          LOOP AT ti_lines.
+
+            IF lc_cont < 150.
+              CONCATENATE lc_txt_str ti_lines-tdline cl_abap_char_utilities=>cr_lf INTO lc_txt_str.
+              lc_cont = lc_cont + 1.
+            ENDIF.
+
+          ENDLOOP.
+          CLEAR lc_cont.
+        ENDIF.
+        it_excel_n-txt_longo = lc_txt_str.
+      ENDIF.
+
+      APPEND it_excel_n.
+    ENDLOOP.
+
+    obj_xml->export_to_wsheet( it_excel_n[] ).
+
+    CLEAR: it_excel_n. REFRESH: it_excel_n.
+
+
+    " ..........................................................................
+    " MEDIDAS ou Demandas:NOTAS E MEDIDAS com Ordem associada (dy_dme)
+    " ..........................................................................
+  ELSEIF ( rb_med = 'X' ). " OR ( rb_dem = 'X' AND dy_dme = 'X' ).              " ### REMOÇÃO tipo DEMANDAS (rb_dem) - INÍCIO e FIM ###
+    CLEAR: it_excel_m, it_aux_m, ti_lines.
+
+    " Ordena a ITable dos dados que serão exportados POR PLANILHA a partir da ITable de ordenação final (lt_bkg_wsheet_sortorder) [Cenário de exportação VIA EXECUÇÃO BACKGROUND e POR PLANILHA]
+    IF lt_bkg_wsheet_sortorder[] IS NOT INITIAL.
+      SORT gcol_medout[] BY (lt_bkg_wsheet_sortorder).      " Sintaxe SORT com ITable do tipo abap_sortorder_tab declarada
+    ENDIF.
+
+    LOOP AT gcol_medout INTO it_aux_m WHERE selected = 'X'.
+      CLEAR: v_name_order, lc_txt_str, lc_cont.
+
+      MOVE-CORRESPONDING it_aux_m TO it_excel_m.
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      " TEXTO LONGO DA MEDIDA/RTI
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      CLEAR it_excel_m-txt_longo.
+      " Se a Medida tem texto longo e se for exportação POR PLANILHA COM TEXTO LONGO (TRUE), busca e armazena o texto longo na planilha a ser exportada
+      IF it_aux_m-indtx IS NOT INITIAL AND gv_export_wsheet_ltext = abap_true.
+        CONCATENATE it_aux_m-qmnum it_aux_m-m_manum INTO v_name_order.
+
+        CALL FUNCTION 'READ_TEXT'
+          EXPORTING
+            id                      = 'LTXT'
+            language                = sy-langu
+            name                    = v_name_order
+            object                  = 'QMSM'
+          TABLES
+            lines                   = ti_lines
+          EXCEPTIONS
+            id                      = 1
+            language                = 2
+            name                    = 3
+            not_found               = 4
+            object                  = 5
+            reference_check         = 6
+            wrong_access_to_archive = 7
+            OTHERS                  = 8.
+        IF sy-subrc <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*         WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+        ELSE.
+          CLEAR lc_txt_str.
+          LOOP AT ti_lines.
+
+            IF lc_cont < 150.
+              CONCATENATE lc_txt_str ti_lines-tdline cl_abap_char_utilities=>cr_lf INTO lc_txt_str.
+              lc_cont = lc_cont + 1.
+            ENDIF.
+
+          ENDLOOP.
+          it_excel_m-txt_longo = lc_txt_str. " amss 16/10/2023
+          CLEAR lc_cont.
+        ENDIF.
+*        APPEND it_excel_m.
+      ENDIF. " amss
+*--- Inicio amss 15/10/2023 --*
+
+*types: begin of ty_qmma,
+*       qmnum type qmnum,
+*       fenum type fenum,
+*      end of ty_qmma.
+      DATA: BEGIN OF it_qmma OCCURS 100,
+              qmnum LIKE qmma-qmnum,
+              fenum LIKE qmma-fenum,
+              manum LIKE qmma-manum. " amss 13/12/2023
+      DATA: END OF it_qmma.
+
+      DATA: BEGIN OF it_qmfe OCCURS 100,
+              qmnum LIKE qmfe-qmnum,
+              fenum LIKE qmfe-fenum.
+      DATA: END OF it_qmfe.
+
+*
+*data: it_qmma type table of ty_qmma.
+
+      SELECT qmnum, fenum, manum FROM qmma INTO TABLE @it_qmma
+      WHERE qmnum = @it_aux_m-qmnum
+      AND indtx = 'X'.
+
+      SELECT qmnum, fenum FROM qmfe INTO TABLE @it_qmfe
+     WHERE qmnum = @it_aux_m-qmnum
+     AND indtx = 'X'.
+
+
+      IF it_aux_m-b_indtx IS NOT INITIAL AND gv_export_wsheet_ltext = abap_true.
+
+        READ TABLE it_qmma INTO DATA(ls_qmma) WITH KEY qmnum =  it_aux_m-qmnum
+                                                       fenum = it_aux_m-m_fenum" AÇÃO
+                                                       manum = it_aux_m-a_manum. " amss 13/12/2023 " AÇÃO
+
+
+*          CONCATENATE it_aux_m-qmnum v_fenum INTO v_name_order.
+
+*          CONCATENATE it_aux_m-qmnum it_aux_m-m_manum INTO v_name_order. " AÇÃO amss 14/12/2023
+        CONCATENATE it_aux_m-qmnum it_aux_m-a_manum INTO v_name_order.  " AÇÃO  amss 14/12/2023
+        REFRESH ti_lines. CLEAR: ti_lines.
+        CALL FUNCTION 'READ_TEXT'
+          EXPORTING
+            id                      = 'LTXT'
+            language                = sy-langu
+            name                    = v_name_order
+            object                  = 'QMMA'
+          TABLES
+            lines                   = ti_lines
+          EXCEPTIONS
+            id                      = 1
+            language                = 2
+            name                    = 3
+            not_found               = 4
+            object                  = 5
+            reference_check         = 6
+            wrong_access_to_archive = 7
+            OTHERS                  = 8.
+        IF sy-subrc <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*         WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+        ELSE.
+          CLEAR lc_txt_str.
+          LOOP AT ti_lines.
+
+            IF lc_cont < 150.
+              CONCATENATE lc_txt_str ti_lines-tdline cl_abap_char_utilities=>cr_lf INTO lc_txt_str.
+              lc_cont = lc_cont + 1.
+            ENDIF.
+
+          ENDLOOP.
+          it_excel_m-txt_longo_a = lc_txt_str. " amss 16/10/2023
+          CLEAR lc_cont.
+*            APPEND it_excel_m.
+        ENDIF.
+
+      ENDIF. " amss
+
+      IF it_aux_m-a_indtx IS NOT INITIAL AND gv_export_wsheet_ltext = abap_true.
+
+        READ TABLE it_qmfe INTO DATA(ls_qmfe) WITH KEY qmnum =  it_aux_m-qmnum
+                                                       fenum = it_aux_m-m_fenum.
+
+        v_tabix = sy-tabix.
+        CONCATENATE it_aux_m-qmnum ls_qmfe-fenum INTO v_name_order.
+
+*        concatenate it_aux_m-qmnum it_aux_m-m_manum into v_name_order.
+        REFRESH ti_lines. CLEAR: ti_lines.
+
+        CALL FUNCTION 'READ_TEXT'
+          EXPORTING
+            id                      = 'LTXT'
+            language                = sy-langu
+            name                    = v_name_order
+            object                  = 'QMFE'
+          TABLES
+            lines                   = ti_lines
+          EXCEPTIONS
+            id                      = 1
+            language                = 2
+            name                    = 3
+            not_found               = 4
+            object                  = 5
+            reference_check         = 6
+            wrong_access_to_archive = 7
+            OTHERS                  = 8.
+        IF sy-subrc <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*         WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+        ELSE.
+          CLEAR lc_txt_str.
+          LOOP AT ti_lines.
+
+            IF lc_cont < 150.
+              CONCATENATE lc_txt_str ti_lines-tdline cl_abap_char_utilities=>cr_lf INTO lc_txt_str.
+              lc_cont = lc_cont + 1.
+            ENDIF.
+
+          ENDLOOP.
+          it_excel_m-txt_longo_p = lc_txt_str. " amss 16/10/2023
+          CLEAR: lc_cont.
+        ENDIF.
+      ENDIF.
+
+*-- final  amss 15/10/2023 --*
+
+
+      APPEND it_excel_m.
+      CLEAR:  it_excel_m.
+      CLEAR: it_aux_m.
+    ENDLOOP.
+*    DELETE ADJACENT DUPLICATES FROM it_excel_m COMPARING qmnum m_fenum a_qmanum a_indtx b_indtx. " amss 23/10/2023
+    obj_xml->export_to_wsheet( it_excel_m[] ).
+
+    CLEAR: it_excel_m. REFRESH: it_excel_m.
+
+    " ..........................................................................
+    " OPERAÇÕES
+    " ..........................................................................
+  ELSEIF rb_ope = 'X'.
+    CLEAR: it_excel_p, it_aux_p, ti_lines.
+
+    " Ordena a ITable dos dados que serão exportados POR PLANILHA a partir da ITable de ordenação final (lt_bkg_wsheet_sortorder) [Cenário de exportação VIA EXECUÇÃO BACKGROUND e POR PLANILHA]
+    IF lt_bkg_wsheet_sortorder[] IS NOT INITIAL.
+      SORT gcol_operacoesout[] BY (lt_bkg_wsheet_sortorder).      " Sintaxe SORT com ITable do tipo abap_sortorder_tab declarada
+    ENDIF.
+
+    LOOP AT gcol_operacoesout INTO it_aux_p WHERE selected = 'X'.
+      CLEAR: v_name_ope, lc_txt_str, lc_cont.
+
+      MOVE-CORRESPONDING it_aux_p TO it_excel_p.
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      " TEXTO LONGO DA MEDIDA/RTI
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      CLEAR it_excel_p-txt_longo.
+
+      " Se a Operação tem texto longo e se for exportação POR PLANILHA COM TEXTO LONGO (TRUE), busca e armazena o texto longo na planilha a ser exportada
+      IF it_aux_p-char01 IS NOT INITIAL AND gv_export_wsheet_ltext = abap_true.
+        CONCATENATE sy-mandt it_aux_p-aufpl it_aux_p-aplzl INTO v_name_ope.
+
+        CALL FUNCTION 'READ_TEXT'
+          EXPORTING
+            id                      = 'AVOT'
+            language                = sy-langu
+            name                    = v_name_ope
+            object                  = 'AUFK'
+          TABLES
+            lines                   = ti_lines
+          EXCEPTIONS
+            id                      = 1
+            language                = 2
+            name                    = 3
+            not_found               = 4
+            object                  = 5
+            reference_check         = 6
+            wrong_access_to_archive = 7
+            OTHERS                  = 8.
+
+        IF sy-subrc <> 0.
+*          MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*          WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+        ELSE.
+          CLEAR lc_txt_str.
+
+          LOOP AT ti_lines.
+
+            IF lc_cont < 150.
+              CONCATENATE lc_txt_str ti_lines-tdline cl_abap_char_utilities=>cr_lf INTO lc_txt_str.
+              lc_cont = lc_cont + 1.
+            ENDIF.
+
+          ENDLOOP.
+          CLEAR lc_cont.
+        ENDIF.
+        it_excel_p-txt_longo = lc_txt_str.
+      ENDIF.
+
+      APPEND it_excel_p.
+    ENDLOOP.
+
+    obj_xml->export_to_wsheet( it_excel_p[] ).
+
+    CLEAR: it_excel_p. REFRESH: it_excel_p.
+
+** INÍCIO - 11.08.2021 17:11:16 - ABAPD94R
+
+    " ..........................................................................
+    " CONFIRMAÇÃO
+    " ..........................................................................
+  ELSEIF rb_con = 'X'.
+    CLEAR: it_excel_c, ti_lines.
+
+*    " Ordena a ITable dos dados que serão exportados POR PLANILHA a partir da ITable de ordenação final (lt_bkg_wsheet_sortorder) [Cenário de exportação VIA EXECUÇÃO BACKGROUND e POR PLANILHA]
+*    IF lt_bkg_wsheet_sortorder[] IS NOT INITIAL.
+*      SORT gcol_operacoesout[] BY (lt_bkg_wsheet_sortorder).      " Sintaxe SORT com ITable do tipo abap_sortorder_tab declarada
+*    ENDIF.
+
+    LOOP AT gcol_confirmacaoout INTO DATA(it_aux_c) WHERE selected2 = 'X'.
+      CLEAR: v_name_ope, lc_txt_str, lc_cont.
+
+      MOVE-CORRESPONDING it_aux_c TO it_excel_c.
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      " TEXTO LONGO
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      CLEAR it_excel_c-txt_longo.
+
+*      IF it_aux_c-char01 IS NOT INITIAL AND gv_export_wsheet_ltext = ABAP_TRUE.
+      CONCATENATE sy-mandt it_aux_c-rueck it_aux_c-rmzhl INTO v_name_con.
+
+      CALL FUNCTION 'READ_TEXT'
+        EXPORTING
+          id                      = 'RMEL'
+          language                = sy-langu
+          name                    = v_name_con
+          object                  = 'AUFK'
+        TABLES
+          lines                   = ti_lines
+        EXCEPTIONS
+          id                      = 1
+          language                = 2
+          name                    = 3
+          not_found               = 4
+          object                  = 5
+          reference_check         = 6
+          wrong_access_to_archive = 7
+          OTHERS                  = 8.
+
+      IF sy-subrc <> 0.
+*          MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*          WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+      ELSE.
+        CLEAR lc_txt_str.
+
+        LOOP AT ti_lines.
+
+          IF lc_cont < 150.
+            CONCATENATE lc_txt_str ti_lines-tdline cl_abap_char_utilities=>cr_lf INTO lc_txt_str.
+            lc_cont = lc_cont + 1.
+          ENDIF.
+
+        ENDLOOP.
+        CLEAR lc_cont.
+      ENDIF.
+      it_excel_c-txt_longo = lc_txt_str.
+*      ENDIF.
+
+      APPEND it_excel_c.
+    ENDLOOP.
+
+    obj_xml->export_to_wsheet( it_excel_c[] ).
+
+    CLEAR: it_excel_c. REFRESH: it_excel_c.
+** FIM - 11.08.2021 17:11:16 - ABAPD94R
+  ELSEIF rb_lis = 'X'.
+    CLEAR: it_excel_l, ti_lines.
+
+    DATA: BEGIN OF texto,
+            mandt	TYPE mandt,
+            plnty	TYPE plnty,
+            plnnr	TYPE plnnr,
+            plnal	TYPE plnal,
+            zaehl	TYPE cim_count,
+          END OF texto.
+*    " Ordena a ITable dos dados que serão exportados POR PLANILHA a partir da ITable de ordenação final (lt_bkg_wsheet_sortorder) [Cenário de exportação VIA EXECUÇÃO BACKGROUND e POR PLANILHA]
+*    IF lt_bkg_wsheet_sortorder[] IS NOT INITIAL.
+*      SORT gcol_operacoesout[] BY (lt_bkg_wsheet_sortorder).      " Sintaxe SORT com ITable do tipo abap_sortorder_tab declarada
+*    ENDIF.
+
+    LOOP AT gcol_listaout INTO DATA(it_aux_l) WHERE selected = 'X'.
+      CLEAR: v_name_ope, lc_txt_str, lc_cont.
+
+      MOVE-CORRESPONDING it_aux_l TO it_excel_l.
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      " TEXTO LONGO
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      CLEAR: it_excel_l-txt_longo, texto.
+
+      texto-mandt = sy-mandt.
+      texto-plnal = it_aux_l-plnal.
+      texto-plnnr = it_aux_l-plnnr.
+      texto-plnty = it_aux_l-plnty.
+      texto-zaehl = it_aux_l-zaehl.
+*      IF it_aux_l-char01 IS NOT INITIAL AND gv_export_wsheet_ltext = ABAP_TRUE.
+
+      v_name_con = texto." separated by space.
+
+      CALL FUNCTION 'READ_TEXT'
+        EXPORTING
+          id                      = 'PLKO'
+          language                = sy-langu
+          name                    = v_name_con
+          object                  = 'ROUTING'
+        TABLES
+          lines                   = ti_lines
+        EXCEPTIONS
+          id                      = 1
+          language                = 2
+          name                    = 3
+          not_found               = 4
+          object                  = 5
+          reference_check         = 6
+          wrong_access_to_archive = 7
+          OTHERS                  = 8.
+
+      IF sy-subrc <> 0.
+*          MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*          WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+      ELSE.
+        CLEAR lc_txt_str.
+
+        LOOP AT ti_lines.
+
+          IF lc_cont < 150.
+            CONCATENATE lc_txt_str ti_lines-tdline cl_abap_char_utilities=>cr_lf INTO lc_txt_str.
+            lc_cont = lc_cont + 1.
+          ENDIF.
+
+        ENDLOOP.
+        CLEAR lc_cont.
+      ENDIF.
+      it_excel_l-txt_longo = lc_txt_str.
+*      ENDIF.
+
+      APPEND it_excel_l.
+    ENDLOOP.
+
+    obj_xml->export_to_wsheet( it_excel_l[] ).
+
+    CLEAR: it_excel_l. REFRESH: it_excel_l.
+  ELSEIF rb_trf EQ 'X'.
+
+    CLEAR: it_excel_t, ti_lines.
+
+    DATA: BEGIN OF texto1,
+            mandt	TYPE mandt,
+            plnty	TYPE plnty,
+            plnnr	TYPE plnnr,
+            plnkn	TYPE plnkn,
+            zaehl	TYPE cim_count,
+          END OF texto1.
+*    " Ordena a ITable dos dados que serão exportados POR PLANILHA a partir da ITable de ordenação final (lt_bkg_wsheet_sortorder) [Cenário de exportação VIA EXECUÇÃO BACKGROUND e POR PLANILHA]
+*    IF lt_bkg_wsheet_sortorder[] IS NOT INITIAL.
+*      SORT gcol_operacoesout[] BY (lt_bkg_wsheet_sortorder).      " Sintaxe SORT com ITable do tipo abap_sortorder_tab declarada
+*    ENDIF.
+    LOOP AT gcol_trfout INTO DATA(it_trf_l) WHERE selected = 'X'.
+      CLEAR: v_name_ope, lc_txt_str, lc_cont.
+
+      MOVE-CORRESPONDING it_trf_l TO it_excel_t.
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      " TEXTO LONGO
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      CLEAR: it_excel_t-txt_longo, texto.
+
+
+      texto1-mandt  = sy-mandt.
+      texto1-plnty  = it_trf_l-plnty.
+      texto1-plnnr  = it_trf_l-plnnr.
+      texto1-plnkn  = it_trf_l-plnkn.
+      texto1-zaehl  = it_trf_l-zaehl.
+*      IF it_aux_l-char01 IS NOT INITIAL AND gv_export_wsheet_ltext = ABAP_TRUE.
+
+      v_name_trf = texto1." separated by space.
+
+      CALL FUNCTION 'READ_TEXT'
+        EXPORTING
+          id                      = 'PLPO'
+          language                = sy-langu
+          name                    = v_name_trf
+          object                  = 'ROUTING'
+        TABLES
+          lines                   = ti_lines
+        EXCEPTIONS
+          id                      = 1
+          language                = 2
+          name                    = 3
+          not_found               = 4
+          object                  = 5
+          reference_check         = 6
+          wrong_access_to_archive = 7
+          OTHERS                  = 8.
+
+      IF sy-subrc <> 0.
+        CLEAR it_excel_t-char01.
+      ELSE.
+        CLEAR lc_txt_str.
+
+        LOOP AT ti_lines.
+
+          IF lc_cont < 150.
+            CONCATENATE lc_txt_str ti_lines-tdline cl_abap_char_utilities=>cr_lf INTO lc_txt_str.
+            lc_cont = lc_cont + 1.
+          ENDIF.
+
+        ENDLOOP.
+        CLEAR lc_cont.
+      ENDIF.
+      it_excel_t-txt_longo = lc_txt_str.
+*      ENDIF.
+
+      APPEND it_excel_t.
+    ENDLOOP.
+
+    obj_xml->export_to_wsheet( it_excel_t[] ).
+
+    CLEAR: it_excel_t. REFRESH: it_excel_t.
+
+  ENDIF.
+
+ENDFORM.                    " CRIA_PLANILHA
+
+FORM f_run_background_wsheet.
+
+  DESCRIBE TABLE gcol_medout LINES DATA(li_lines).
+** INÍCIO - 16.08.2021 10:41:44 - ABAPD94R
+
+
+** FIM - 16.08.2021 10:41:44 - ABAPD94R
+  IF gcol_orderout IS NOT INITIAL.
+    DESCRIBE TABLE gcol_orderout LINES li_lines.
+  ENDIF.
+  IF gcol_noteout IS NOT INITIAL.
+    DESCRIBE TABLE gcol_noteout LINES li_lines.
+  ENDIF.
+  IF gcol_operacoesout IS NOT INITIAL.
+    DESCRIBE TABLE gcol_operacoesout LINES li_lines.
+  ENDIF.
+  IF gcol_confirmacaoout IS NOT INITIAL.
+    DESCRIBE TABLE gcol_confirmacaoout LINES li_lines.
+  ENDIF.
+** INÍCIO - 25.08.2021 09:19:55 - ABAPD94R
+  IF gt_data IS NOT INITIAL.
+    DESCRIBE TABLE gt_data LINES li_lines.
+  ENDIF.
+** FIM - 25.08.2021 09:19:55 - ABAPD94R
+  IF gcol_listaout IS NOT INITIAL.
+    DESCRIBE TABLE gcol_listaout LINES li_lines.
+  ENDIF.
+  IF gcol_trfout IS NOT INITIAL.
+    DESCRIBE TABLE gcol_trfout LINES li_lines.
+  ENDIF.
+
+  DO li_lines TIMES.
+    APPEND INITIAL LINE TO gt_selected_rows ASSIGNING FIELD-SYMBOL(<fs_s_row>).
+    <fs_s_row>-index = sy-index.
+  ENDDO.
+                                                        "#EC CI_NOORDER
+  PERFORM f_get_selected_rows USING '&EXCEL'.           "#EC CI_NOORDER
+  PERFORM cria_planilha.
+
+  IF gr_grid IS INITIAL.
+    IF cl_gui_alv_grid=>offline( ) IS INITIAL.
+
+      " Cria o container da ALVGrid
+      CREATE OBJECT gr_container
+        EXPORTING
+          container_name = 'CC_CONTAINER1'.
+
+      " Cria objeto ALVGrid associado ao container
+      CREATE OBJECT gr_grid
+        EXPORTING
+          i_parent = gr_container.
+    ELSE.
+      CREATE OBJECT gr_grid
+        EXPORTING
+          i_parent = g_dock.
+    ENDIF.
+  ENDIF.
+
+  " Monta o fieldcatalog para a ITable de log de execução a ser impressa/apresentada no spool do cenário de exportação VIA EXECUÇÃO BACKGROUND e POR PLANILHA
+  DATA lstr_fieldcat LIKE LINE OF git_fieldcat.
+  CLEAR: git_fieldcat[].
+  CLEAR lstr_fieldcat.
+  ADD 1 TO lstr_fieldcat-col_pos.
+  lstr_fieldcat-fieldname     = 'NUMBER'.
+  lstr_fieldcat-ref_field     = 'NUMBER'.
+  lstr_fieldcat-ref_table     = 'BAPIRET2'.
+*  lstr_fieldcat-coltext       = text-525.
+*  lstr_fieldcat-seltext       = text-525.
+  lstr_fieldcat-fix_column    = 'X'.
+  lstr_fieldcat-just          = 'R'.
+  lstr_fieldcat-outputlen     = '3'.
+  APPEND lstr_fieldcat TO git_fieldcat.
+
+  CLEAR lstr_fieldcat.
+  ADD 1 TO lstr_fieldcat-col_pos.
+  lstr_fieldcat-fieldname     = 'MESSAGE'.
+  lstr_fieldcat-ref_field     = 'MESSAGE'.
+  lstr_fieldcat-ref_table     = 'BAPIRET2'.
+*  lstr_fieldcat-coltext       = text-525.
+*  lstr_fieldcat-seltext       = text-525.
+  lstr_fieldcat-fix_column    = 'X'.
+  lstr_fieldcat-just          = 'R'.
+  lstr_fieldcat-outputlen     = '150'.
+  APPEND lstr_fieldcat TO git_fieldcat.
+
+  " Apresenta as informações na ITable de log de execução no spool para o cenário de exportação VIA EXECUÇÃO BACKGROUND e POR PLANILHA
+  gr_grid->set_table_for_first_display(     ##SUBRC_OK
+    CHANGING
+        it_outtab                     = gt_export_bkg_wsheet_log[]
+        it_fieldcatalog               = git_fieldcat[]
+    EXCEPTIONS
+      invalid_parameter_combination = 1
+      program_error                 = 2
+      too_many_lines                = 3
+      OTHERS                        = 4 ) .
+
+ENDFORM.
+
+FORM f_setup_fieldcatalog.
+
+  DATA lstr_fieldcat LIKE LINE OF git_fieldcat.
+  REFRESH: git_fieldcat.
+
+  " Somente apresenta se NÃO FOR RELATÓRIO DE OPERAÇÃO E
+  " se for execução ON-LINE (se for execução BACKGROUND não apresenta estas colunas de ícone e símbolo)
+  IF rb_ope <> 'X' AND NOT ( sy-batch = abap_true OR sy-ucomm = 'SJOB' ).
+    CLEAR lstr_fieldcat.        " LINE CHECK: SYMBOL mode (default)
+    ADD 1 TO lstr_fieldcat-col_pos.
+    lstr_fieldcat-fieldname     = 'LINECHECK_SYMBOL'. " 1/5 required field for OUTPUT TABLE FIELD without DDIC reference
+    lstr_fieldcat-inttype       = 'C'.                " 2/5 required field for OUTPUT TABLE FIELD without DDIC reference
+    lstr_fieldcat-outputlen     = '2'.                " 3/5 required field for OUTPUT TABLE FIELD without DDIC reference
+    lstr_fieldcat-reptext       = TEXT-028.                 " 4.a/5
+    lstr_fieldcat-scrtext_s     = TEXT-027.                 " 4.b/5
+    lstr_fieldcat-scrtext_m     = TEXT-026.                 " 4.c/5
+    lstr_fieldcat-scrtext_l     = TEXT-025.                 " 4.d/5
+    lstr_fieldcat-seltext       = TEXT-025.           " 5/5 required field for OUTPUT TABLE FIELD without DDIC reference
+    lstr_fieldcat-symbol        = 'X'.                " Show as a symbol
+    lstr_fieldcat-fix_column    = 'X'.                " Fix/freeze column in the ALVGrid (also see atributte "key")
+    lstr_fieldcat-just          = 'C'.
+    lstr_fieldcat-no_out        = 'X'.
+    lstr_fieldcat-emphasize     = 'C000'.
+    lstr_fieldcat-sp_group      = 'GR01'.             " Field Group for showing in a list box to select the fields in a "Layout Changing"
+    lstr_fieldcat-outputlen     = '4'.
+    APPEND lstr_fieldcat TO git_fieldcat.
+    " IMPORTANT:
+    " a) coltext - Define a fixed header text
+    " b) reptext - Define the default header text (from DDIC but can be changed)
+    "    scrtext_* - Define 3 kinds of header text to be showed dynamically according to the column width (from DDIC but can be changed)
+    "    colddictxt (S M L R) - Define the scrtext_* to be used as a fixed header text (ignoring the others) (from DDIC but can be changed)
+    " c) seltext - Define a column description in column selection for layout (Layout Variant) (from DDIC but can be changed)
+    " Obs.: 1) coltext and scrtext_* are exclusives (coltext overwrite scrtext_*)
+    "       2) CWIDTH_OPT (atributo de layout da ALVGrid) interfere nas definições do FIELDCATALOG (iw38 e ipm2 não utilizam o atributo CWIDTH_OPT)
+
+    CLEAR lstr_fieldcat.        " LINE CHECK: ICON mode
+    ADD 1 TO lstr_fieldcat-col_pos.
+    lstr_fieldcat-fieldname     = 'LINECHECK_ICON'.
+    lstr_fieldcat-inttype       = 'C'.
+    lstr_fieldcat-outputlen     = '4'.
+    lstr_fieldcat-reptext       = TEXT-028.
+    lstr_fieldcat-scrtext_s     = TEXT-027.
+    lstr_fieldcat-scrtext_m     = TEXT-026.
+    lstr_fieldcat-scrtext_l     = TEXT-025.
+    lstr_fieldcat-seltext       = TEXT-029.
+    lstr_fieldcat-icon          = 'X'.
+    lstr_fieldcat-fix_column    = 'X'.
+    lstr_fieldcat-just          = 'C'.
+    lstr_fieldcat-emphasize     = 'C000'.
+    lstr_fieldcat-no_out        = ' '.
+    lstr_fieldcat-sp_group      = 'GR01'.
+    lstr_fieldcat-outputlen     = '4'.
+    APPEND lstr_fieldcat TO git_fieldcat.
+  ENDIF.
+
+
+  " ===============================================================================================================================
+  " Configura o FieldCatalog de acordo com o Tipo de Relatório setado (radiobutton rb_order, rb_note ou rb_med)
+  " ===============================================================================================================================
+  " ..........................................................................
+  " ORDENS ou Demandas:ORDENS sem Nota e sem Medida (dy_dor)
+  " ..........................................................................
+  IF     ( rb_order = 'X' ). " OR ( rb_dem = 'X' AND dy_dor = 'X' ).          " ### REMOÇÃO tipo DEMANDAS (rb_dem) - INÍCIO e FIM ###
+    PERFORM f_setup_fieldcatalog_o.
+    " ..........................................................................
+    " NOTAS ou Demandas:NOTAS sem Medida e sem Ordem (dy_dnt)
+    " ..........................................................................
+  ELSEIF ( rb_note = 'X' ). "  OR ( rb_dem = 'X' AND dy_dnt = 'X' ).          " ### REMOÇÃO tipo DEMANDAS (rb_dem) - INÍCIO e FIM ###
+    PERFORM f_setup_fieldcatalog_n.
+    " ..........................................................................
+    " MEDIDAS ou Demandas:NOTAS E MEDIDAS com Ordem associada (dy_dme)
+    " ..........................................................................
+  ELSEIF ( rb_med = 'X'). "    OR ( rb_dem = 'X' AND dy_dme = 'X' ).          " ### REMOÇÃO tipo DEMANDAS (rb_dem) - INÍCIO e FIM ###
+    PERFORM f_setup_fieldcatalog_m.
+    " ..........................................................................
+    " OPERAÇÕES
+    " ..........................................................................
+  ELSEIF rb_ope = 'X'.
+    PERFORM f_setup_fieldcatalog_p.
+
+** INÍCIO - 11.08.2021 14:49:10 - ABAPD94R
+  ELSEIF rb_con = 'X'.
+    PERFORM f_setup_fieldcatalog_c.
+** FIM - 11.08.2021 14:49:10 - ABAPD94R
+  ELSEIF rb_doc = 'X'.
+    PERFORM f_setup_fieldcatalog_doc.
+** FIM - 11.08.2021 14:49:10 - ABAPD94R
+  ELSEIF rb_lis = 'X'.
+    PERFORM f_setup_fieldcatalog_lis.
+  ELSEIF rb_trf EQ 'X'.
+    PERFORM f_setup_fieldcatalog_trf.
+  ENDIF.
+
+ENDFORM.                    "f_Setup_FieldCatalog
