@@ -1,0 +1,2209 @@
+$ ---------------------------------------------------------------------------------------------------------------------------- *$*$
+*----------------------------------------------------------------------*
+*       CLASS lcl_event_handler DEFINITION
+*----------------------------------------------------------------------*
+CLASS lcl_event_handler DEFINITION.
+  PUBLIC SECTION .
+    METHODS:
+      "To add new functional buttons to the ALV toolbar
+      handle_toolbar FOR EVENT toolbar OF cl_gui_alv_grid
+        IMPORTING e_object e_interactive ,
+      "To implement user commands
+      handle_user_command FOR EVENT user_command OF cl_gui_alv_grid
+        IMPORTING e_ucomm ,
+      "To implement ???
+      handle_context_menu_request FOR EVENT context_menu_request OF cl_gui_alv_grid
+        IMPORTING e_object ,
+      "Hotspot click control
+      handle_hotspot_click FOR EVENT hotspot_click OF cl_gui_alv_grid
+        IMPORTING e_row_id e_column_id es_row_no ,
+      "Double-click control
+      handle_double_click FOR EVENT double_click OF cl_gui_alv_grid
+        IMPORTING e_row e_column es_row_no,
+      "To be triggered before user commands
+      handle_before_user_command FOR EVENT before_user_command OF cl_gui_alv_grid
+        IMPORTING e_ucomm ,
+      "To be triggered after user commands
+      handle_after_user_command FOR EVENT after_user_command OF cl_gui_alv_grid
+        IMPORTING e_ucomm	e_saved	e_not_processed ,
+      "Controlling data changes when ALV Grid is editable
+      handle_after_refresh FOR EVENT after_refresh OF cl_gui_alv_grid,
+      "Controlling data changes when ALV Grid is editable
+      handle_data_changed FOR EVENT data_changed OF cl_gui_alv_grid
+        IMPORTING er_data_changed ,
+      "To be triggered after data changing is finished
+      handle_data_changed_finished FOR EVENT data_changed_finished OF cl_gui_alv_grid
+        IMPORTING e_modified ,
+      "To control menu buttons
+      handle_menu_button FOR EVENT menu_button OF cl_gui_alv_grid
+        IMPORTING e_object e_ucomm ,
+      "To control button clicks
+      handle_button_click FOR EVENT button_click OF cl_gui_alv_grid
+        IMPORTING es_col_id es_row_no,
+      "To control button clicks
+      handle_print_top_of_list FOR EVENT print_top_of_list OF cl_gui_alv_grid.
+  PRIVATE SECTION.
+
+
+
+
+
+
+ENDCLASS.                    "lcl_event_handler DEFINITION
+
+*----------------------------------------------------------------------*
+*       CLASS lcl_event_handler IMPLEMENTATION
+*----------------------------------------------------------------------*
+CLASS lcl_event_handler IMPLEMENTATION .
+  "Handle Toolbar
+  METHOD handle_toolbar.
+    PERFORM f_handle_toolbar USING e_object e_interactive .
+  ENDMETHOD .                    "handle_toolbar
+  "Handle User Command
+  METHOD handle_user_command .
+    "PERFORM f_handle_user_command USING e_ucomm .
+  ENDMETHOD.                    "handle_user_command
+  "Handle Context Menu Request
+  METHOD handle_context_menu_request .
+    "PERFORM f_handle_context_menu_request USING e_object .
+  ENDMETHOD.                    "handle_context_menu_request
+  "Handle After Refresh
+  METHOD handle_after_refresh.
+    "PERFORM f_handle_after_refresh USING e_object .
+  ENDMETHOD.                    "handle_after_refresh
+  "Handle Hotspot Click
+  METHOD handle_hotspot_click .
+    " PERFORM f_handle_hotspot_click USING e_row_id e_column_id es_row_no .
+  ENDMETHOD .                    "handle_hotspot_click
+  "Handle Double Click
+  METHOD handle_double_click .
+    PERFORM f_handle_double_click USING e_row e_column es_row_no .
+  ENDMETHOD .                    "handle_double_click
+  "Handle Before User Command
+  METHOD handle_before_user_command .
+    "PERFORM f_handle_before_user_command USING e_ucomm .
+  ENDMETHOD .                    "handle_before_user_command
+  "Handle After User Command
+  METHOD handle_after_user_command .
+    PERFORM f_handle_after_user_command USING e_ucomm	e_saved	e_not_processed.
+  ENDMETHOD .                    "handle_after_user_command
+  "Handle Data Changed
+  METHOD handle_data_changed .
+    "PERFORM f_handle_data_changed USING er_data_changed .
+  ENDMETHOD.                    "handle_data_changed
+  "Handle Data Changed Finished
+  METHOD handle_data_changed_finished .
+    "PERFORM f_handle_data_changed_finished USING e_modified .
+  ENDMETHOD .                    "handle_data_changed_finished
+  "Handle Menu Buttons
+  METHOD handle_menu_button .
+    "PERFORM f_handle_menu_button USING e_object e_ucomm .
+  ENDMETHOD .                    "handle_menu_button
+  "Handle Button Click
+  METHOD handle_button_click .
+    "PERFORM f_handle_button_click USING es_col_id es_row_no.
+  ENDMETHOD .                    "handle_button_click
+  "Handle Print top of list
+  METHOD handle_print_top_of_list.
+    "PERFORM f_handle_button_click USING es_col_id es_row_no.
+  ENDMETHOD .                    "handle_print_top_of_list
+
+ENDCLASS .                    "lcl_event_handler IMPLEMENTATION
+
+
+*----------------------------------------------------------------------*
+*       METHOD handle_toolbar IMPLEMENTATION
+*----------------------------------------------------------------------*
+FORM f_handle_toolbar USING i_object TYPE REF TO cl_alv_event_toolbar_set
+      i_intercative TYPE char01 .
+  DATA: ls_toolbar TYPE stb_button.
+
+  " Insert the refresh button after "detail button" (position INDEX 2)
+  CLEAR ls_toolbar.
+  ls_toolbar-butn_type = 0.       " 3 - separator
+  ls_toolbar-function = '&REFRESH'.
+  ls_toolbar-icon = icon_refresh.
+  ls_toolbar-text = ''.
+  ls_toolbar-quickinfo = TEXT-024.
+  ls_toolbar-disabled = ''.
+  INSERT ls_toolbar INTO i_object->mt_toolbar INDEX 2.
+
+* Inserir botões do excel no final
+  " Insert separator
+  CLEAR ls_toolbar.
+  ls_toolbar-butn_type = 3. "separator
+  APPEND ls_toolbar TO i_object->mt_toolbar.
+
+  " Insert the button 'Exportar PLANILHA COM texto longo'(position INDEX 20)
+  CLEAR ls_toolbar.
+  ls_toolbar-butn_type = 0.       " 3 - separator
+  ls_toolbar-function = '&EXCEL'.
+  ls_toolbar-icon = icon_xlv.
+  ls_toolbar-text = ''.
+  ls_toolbar-quickinfo = TEXT-113.  " Exportar COM texto longo
+  ls_toolbar-disabled = ''.
+* INSERT ls_toolbar INTO i_object->mt_toolbar INDEX 20.
+  APPEND ls_toolbar TO i_object->mt_toolbar.
+
+
+  " Insert the button 'Exportar PLANILHA sem texto longo' (position INDEX 21)
+  CLEAR ls_toolbar.
+  ls_toolbar-butn_type = 0.
+  ls_toolbar-function = '&XLS2'.
+  ls_toolbar-icon = icon_xls.
+  ls_toolbar-text = ''.
+  ls_toolbar-quickinfo = TEXT-270.  " Exportar sem texto longo
+  ls_toolbar-disabled = ''.
+* INSERT ls_toolbar INTO i_object->mt_toolbar INDEX 21.
+  APPEND ls_toolbar TO i_object->mt_toolbar.
+
+
+ENDFORM .                    "f_handle_toolbar
+
+*----------------------------------------------------------------------*
+*       METHOD handle_after_user_command IMPLEMENTATION
+*----------------------------------------------------------------------*
+FORM f_handle_after_user_command USING i_ucomm         TYPE syucomm
+      i_saved         TYPE char01
+      i_not_processed TYPE char01.
+
+  DATA: lstr_orderout2 LIKE LINE OF gcol_orderout,
+        v_name_order   LIKE thead-tdname,
+        ti_lines       LIKE tline OCCURS 0 WITH HEADER LINE,
+        v_id           LIKE thead-tdid,
+        v_object       LIKE thead-tdobject.
+
+  DATA: lstr_stable TYPE lvc_s_stbl.
+
+  DATA: it_aux_o TYPE  ty_orderout,   " tab. auxiliar para tratamento do txt longo
+        it_aux_n TYPE  ty_noteout,    " tab. auxiliar para tratamento do txt longo
+        it_aux_m TYPE  ty_med.        " tab. auxiliar para tratamento do txt longo
+  DATA: lc_txt_str TYPE string,       " variavel para concatenar txt longo
+        lc_cont    TYPE n.               " Contador para string do txt longo
+
+  CASE i_ucomm.
+
+    WHEN '&REFRESH'.
+
+      " Apresenta o "progress indicator" com uma mensagem
+      CALL FUNCTION 'SAPGUI_PROGRESS_INDICATOR'
+        EXPORTING
+          percentage = 25
+          text       = TEXT-017.
+
+      CALL FUNCTION 'STATUS_BUFFER_REFRESH'
+        EXPORTING
+          i_free = ' '.
+
+      CLEAR:gcol_medout.
+      REFRESH :gcol_medout.
+
+
+      " ==============================================================================================================================================
+      " Busca os dados acordo com os dados informados na tela de filtro e com Tipo de Filtro setado (radiobutton rb_order, rb_note ou rb_med, rb_dem)
+      " ==============================================================================================================================================
+** INÍCIO - 24.08.2021 10:54:01 - ABAPD94R
+      IF rb_doc = 'X'.
+        FREE: gt_data.
+        REFRESH: gt_data.
+        PERFORM f_busca_dados_doc.
+** FIM - 24.08.2021 10:54:01 - ABAPD94R
+
+        " ..........................................................................
+        " ORDENS ou Demandas:ORDENS sem Nota e sem Medida (dy_dor)
+        " ..........................................................................
+** INÍCIO - 24.08.2021 10:55:57 - ABAPD94R
+*      IF ( rb_order = 'X' ). "    OR ( rb_dem = 'X' AND dy_dor = 'X' ).             " ### REMOÇÃO tipo DEMANDAS (rb_dem) - INÍCIO e FIM ###
+      ELSEIF ( rb_order = 'X' ). "    OR ( rb_dem = 'X' AND dy_dor = 'X' ).             " ### REMOÇÃO tipo DEMANDAS (rb_dem) - INÍCIO e FIM ###
+** FIM - 24.08.2021 10:55:57 - ABAPD94R
+        PERFORM f_sscrgetdata_order.
+
+        " ..........................................................................
+        " NOTAS ou Demandas:NOTAS sem Medida e sem Ordem (dy_dnt)
+        " ..........................................................................
+      ELSEIF ( rb_note = 'X' ). " OR ( rb_dem = 'X' AND dy_dnt = 'X' ).             " ### REMOÇÃO tipo DEMANDAS (rb_dem) - INÍCIO e FIM ###
+        PERFORM f_sscrgetdata_note.
+        " ..........................................................................
+        " MEDIDAS ou Demandas:NOTAS E MEDIDAS com Ordem associada (dy_dme)
+        " ..........................................................................
+      ELSEIF ( rb_med = 'X'). "   OR ( rb_dem = 'X' AND dy_dme = 'X' ).             " ### REMOÇÃO tipo DEMANDAS (rb_dem) - INÍCIO e FIM ###
+        PERFORM f_sscrgetdata_med.
+        " ..........................................................................
+        " OPERAÇÕES
+        " ..........................................................................
+      ELSEIF ( rb_ope = 'X').
+        PERFORM f_sscrgetdata_ope.
+      ELSEIF ( rb_lis = 'X' ).
+        PERFORM f_sscrgetdata_lis.
+      ELSEIF ( rb_trf = 'X' ).
+        PERFORM f_sscrgetdata_trf.
+      ENDIF.
+
+      " Seta os parâmetros para não alterar o posicionamento da ALVGrid
+*      lstr_stable-row = 'X'.
+*      lstr_stable-col = 'X'.
+*      " Refresh ALV Grid com os dados atualizados da OUTPUT ITable
+*      CALL METHOD gr_grid->refresh_table_display
+*        EXPORTING
+*          is_stable = lstr_stable
+*        EXCEPTIONS
+*          finished  = 1
+*          OTHERS    = 2.
+
+*    Refresh grid
+      CALL METHOD gr_grid->refresh_table_display.
+      CALL METHOD cl_gui_cfw=>flush.
+
+    WHEN '&LINECHECK_REFRESH'.
+      " Apresenta o "progress indicator" com uma mensagem
+      CALL FUNCTION 'SAPGUI_PROGRESS_INDICATOR'
+        EXPORTING
+          percentage = 25
+          text       = TEXT-017.
+
+      CALL FUNCTION 'STATUS_BUFFER_REFRESH'
+        EXPORTING
+          i_free = ' '.
+
+*      CLEAR:gcol_medout.
+*      REFRESH :gcol_medout.
+
+      " ==============================================================================================================================================
+      " Busca os dados acordo com os dados informados na tela de filtro e com Tipo de Filtro setado (radiobutton rb_order, rb_note ou rb_med, rb_dem)
+      " ==============================================================================================================================================
+      " ..........................................................................
+      " ORDENS ou Demandas:ORDENS sem Nota e sem Medida (dy_dor)
+      " ..........................................................................
+      IF ( rb_order = 'X' ). "    OR ( rb_dem = 'X' AND dy_dor = 'X' ).             " ### REMOÇÃO tipo DEMANDAS (rb_dem) - INÍCIO e FIM ###
+        PERFORM f_sscrgetdata_order.
+        PERFORM f_marca_processados.
+        " ..........................................................................
+        " NOTAS ou Demandas:NOTAS sem Medida e sem Ordem (dy_dnt)
+        " ..........................................................................
+      ELSEIF ( rb_note = 'X' ). " OR ( rb_dem = 'X' AND dy_dnt = 'X' ).             " ### REMOÇÃO tipo DEMANDAS (rb_dem) - INÍCIO e FIM ###
+        PERFORM f_sscrgetdata_note.
+        PERFORM f_marca_processados.
+        " ..........................................................................
+        " MEDIDAS ou Demandas:NOTAS E MEDIDAS com Ordem associada (dy_dme)
+        " ..........................................................................
+      ELSEIF ( rb_med = 'X'). "   OR ( rb_dem = 'X' AND dy_dme = 'X' ).             " ### REMOÇÃO tipo DEMANDAS (rb_dem) - INÍCIO e FIM ###
+        PERFORM f_sscrgetdata_med.
+        PERFORM f_marca_processados.
+        " ..........................................................................
+        " OPERAÇÕES
+        " ..........................................................................
+      ELSEIF ( rb_ope = 'X').
+        PERFORM f_sscrgetdata_ope.
+        PERFORM f_marca_processados.
+      ELSEIF rb_doc EQ 'X'.
+        PERFORM f_busca_dados_doc.
+        PERFORM f_marca_processados.
+      ELSEIF rb_lis = 'X'.
+        PERFORM f_sscrgetdata_lis.
+        PERFORM f_marca_processados.
+      ELSEIF rb_trf = 'X'.
+        PERFORM f_sscrgetdata_trf.
+        PERFORM f_marca_processados.
+      ENDIF.
+
+      PERFORM f_get_selected_rows USING i_ucomm.
+
+*     " Seta os parâmetros para não alterar o posicionamento da ALVGrid
+      lstr_stable-row = 'X'.
+      lstr_stable-col = 'X'.
+
+*     " Refresh ALV Grid com os dados atualizados da OUTPUT ITable
+      CALL METHOD gr_grid->refresh_table_display ##SUBRC_OK
+        EXPORTING
+          is_stable = lstr_stable
+        EXCEPTIONS
+          finished  = 1
+          OTHERS    = 2.
+
+    WHEN '&EXCEL'.        " Exportar PLANILHA COM texto longo
+
+      PERFORM f_get_selected_rows USING i_ucomm.
+
+*      " Seta os parâmetros para não alterar o posicionamento da ALVGrid
+      lstr_stable-row = 'X'.
+      lstr_stable-col = 'X'.
+
+*      " Refresh ALV Grid com os dados atualizados da OUTPUT ITable
+      CALL METHOD gr_grid->refresh_table_display ##SUBRC_OK
+        EXPORTING
+          is_stable = lstr_stable
+        EXCEPTIONS
+          finished  = 1
+          OTHERS    = 2.
+
+      v_plani = 'excel.exe'.
+
+      " Define dentro do cenário de exportação VIA EXECUÇÃO ON-LINE: exportação POR PLANILHA (FALSE) e POR PLANILHA COM TEXTO LONGO (TRUE)
+      gv_export_bkg_spool_or_wsheet = abap_false.
+      gv_export_wsheet_ltext        = abap_true.
+
+      PERFORM cria_planilha.
+
+    WHEN '&XLS2'.        " Exportar PLANILHA sem texto longo
+
+      PERFORM f_get_selected_rows USING i_ucomm.
+
+*      " Seta os parâmetros para não alterar o posicionamento da ALVGrid
+      lstr_stable-row = 'X'.
+      lstr_stable-col = 'X'.
+
+*      " Refresh ALV Grid com os dados atualizados da OUTPUT ITable
+      CALL METHOD gr_grid->refresh_table_display ##SUBRC_OK
+        EXPORTING
+          is_stable = lstr_stable
+        EXCEPTIONS
+          finished  = 1
+          OTHERS    = 2.
+
+      v_plani = 'excel.exe'.
+
+      " Define dentro do cenário de exportação VIA EXECUÇÃO ON-LINE: exportação POR PLANILHA (FALSE) e POR PLANILHA SEM TEXTO LONGO (FALSE)
+      gv_export_bkg_spool_or_wsheet = abap_false.
+      gv_export_wsheet_ltext        = abap_false.
+
+      PERFORM cria_planilha.
+
+    WHEN OTHERS.
+  ENDCASE.
+
+ENDFORM .                    "f_handle_after_user_command
+
+*&---------------------------------------------------------------------*
+*&      Form  f_handle_double_click
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*      -->E_ROW      text
+*      -->E_COLUMN   text
+*      -->ES_ROW_NO  text
+*----------------------------------------------------------------------*
+FORM f_handle_double_click USING e_row     TYPE lvc_s_row
+      e_column  TYPE lvc_s_col
+      es_row_no TYPE lvc_s_roid.
+  DATA: lstr_orderout        LIKE LINE OF gcol_orderout,
+        lstr_noteout         LIKE LINE OF gcol_noteout,
+        lstr_medout          LIKE LINE OF gcol_medout,
+        lstr_operacoesout    LIKE LINE OF gcol_operacoesout,
+        lb_linecheck_refresh TYPE flag.
+
+  " IMPORTANTE: Não é necessario realizar o refresh (CALL METHOD gr_grid->REFRESH_TABLE_DISPLAY)
+  "             da ALVGrid para manter a visualização anterior ao CALL TRANSACTION
+
+  " ..........................................................................
+  " ORDENS ou Demandas:ORDENS sem Nota e sem Medida (dy_dor)
+  " ..........................................................................
+  " Relatório de Ordem: DoubleClick no campo da Ordem (AUFNR) ou Nota (QMNUM)
+  IF ( rb_order = 'X' ). " OR ( rb_dem = 'X' AND dy_dor = 'X' ).                " ### REMOÇÃO tipo DEMANDAS (rb_dem) - INÍCIO e FIM ###
+    CASE e_column.
+      WHEN 'AUFNR'.
+        wc_coluna = e_column.
+        EXPORT wc_coluna TO MEMORY ID 'PEDK9A4U7G'.
+
+        " Busca o número da Ordem e seta numa var global para ser enxergado na outra screen
+        READ TABLE gcol_orderout INTO lstr_orderout INDEX es_row_no-row_id.
+
+        " Se não há Ordem nada faz (RETURN)
+        IF lstr_orderout-aufnr IS INITIAL.
+          RETURN.
+        ENDIF.
+
+        SET PARAMETER ID 'ANR' FIELD lstr_orderout-aufnr.
+
+        " Verifica se o user tem acesso a transação de edição
+        " Se o usuário tem acesso a transação de edição realiza sua chamada
+        " Senão, realiza a chamada da transação de leitura
+        CALL FUNCTION 'AUTHORITY_CHECK_TCODE'
+          EXPORTING
+            tcode  = c_transactions-orderedit
+          EXCEPTIONS
+            ok     = 0
+            not_ok = 1
+            OTHERS = 2.
+        IF sy-subrc = 0.
+          CALL TRANSACTION c_transactions-orderedit AND SKIP FIRST SCREEN.
+        ELSE.
+          CALL TRANSACTION c_transactions-orderread AND SKIP FIRST SCREEN.
+        ENDIF.
+
+        " Set LINECHECK fields
+        lstr_orderout-linecheck_symbol = sym_check_mark. " sym_printer
+        lstr_orderout-linecheck_icon   = icon_checked.
+        MODIFY gcol_orderout INDEX es_row_no-row_id FROM lstr_orderout
+        TRANSPORTING selected linecheck_symbol linecheck_icon.
+
+        " Seta o flag de Refresh dos LINECHECK fields
+        lb_linecheck_refresh = 'X'.
+
+        gcol_orderbkp[] = gcol_orderout[].
+
+      WHEN 'QMNUM'.
+        wc_coluna = e_column.
+        EXPORT wc_coluna TO MEMORY ID 'PEDK9A4U7G'.
+
+        " Busca o número da Nota e seta numa var global para ser enxergado na outra screen
+        READ TABLE gcol_orderout INTO lstr_orderout INDEX es_row_no-row_id.
+
+        " Se não há Nota nada faz (RETURN)
+        IF lstr_orderout-qmnum IS INITIAL.
+          RETURN.
+        ENDIF.
+
+        SET PARAMETER ID 'IQM' FIELD lstr_orderout-qmnum.
+
+        " Verifica se o user tem acesso a transação de edição
+        " Se o usuário tem acesso a transação de edição realiza sua chamada
+        " Senão, realiza a chamada da transação de leitura
+        CALL FUNCTION 'AUTHORITY_CHECK_TCODE'
+          EXPORTING
+            tcode  = c_transactions-noteedit
+          EXCEPTIONS
+            ok     = 0
+            not_ok = 1
+            OTHERS = 2.
+        IF sy-subrc = 0.
+          CALL TRANSACTION c_transactions-noteedit AND SKIP FIRST SCREEN.
+        ELSE.
+          CALL TRANSACTION c_transactions-noteread AND SKIP FIRST SCREEN.
+        ENDIF.
+
+        " Set LINECHECK fields
+        lstr_orderout-linecheck_symbol = sym_check_mark. " sym_printer
+        lstr_orderout-linecheck_icon   = icon_checked.
+        MODIFY gcol_orderout INDEX es_row_no-row_id FROM lstr_orderout
+        TRANSPORTING selected linecheck_symbol linecheck_icon.
+
+        " Seta o flag de Refresh dos LINECHECK fields
+        lb_linecheck_refresh = 'X'.
+
+        gcol_orderbkp[] = gcol_orderout[].
+
+    ENDCASE.
+
+    " .........................................................................................
+    " NOTAS ou Demandas:NOTAS sem Medida e sem Ordem (dy_dnt)
+    " .........................................................................................
+    " Relatório de Nota (gcol_NoteOUT): DoubleClick no campo da Ordem (AUFNR) ou Nota (QMNUM)
+  ELSEIF ( rb_note = 'X' ). " OR ( rb_dem = 'X' AND  dy_dnt = 'X' ).                        " ### REMOÇÃO tipo DEMANDAS (rb_dem) - INÍCIO e FIM ###
+    CASE e_column.
+      WHEN 'AUFNR'.
+        wc_coluna = e_column.
+        EXPORT wc_coluna TO MEMORY ID 'PEDK9A4U7G'.
+
+        " Busca o número da Ordem e seta numa var global para ser enxergado na outra screen
+        READ TABLE gcol_noteout INTO lstr_noteout INDEX es_row_no-row_id.
+
+        " Se não há Ordem nada faz (RETURN)
+        IF lstr_noteout-aufnr IS INITIAL.
+          RETURN.
+        ENDIF.
+
+        SET PARAMETER ID 'ANR' FIELD lstr_noteout-aufnr.
+
+        " Verifica se o user tem acesso a transação de edição
+        " Se o usuário tem acesso a transação de edição realiza sua chamada
+        " Senão, realiza a chamada da transação de leitura
+        CALL FUNCTION 'AUTHORITY_CHECK_TCODE'
+          EXPORTING
+            tcode  = c_transactions-orderedit
+          EXCEPTIONS
+            ok     = 0
+            not_ok = 1
+            OTHERS = 2.
+        IF sy-subrc = 0.
+          CALL TRANSACTION c_transactions-orderedit AND SKIP FIRST SCREEN.
+        ELSE.
+          CALL TRANSACTION c_transactions-orderread AND SKIP FIRST SCREEN.
+        ENDIF.
+
+        " Set LINECHECK fields
+        lstr_noteout-linecheck_symbol = sym_check_mark. " sym_printer
+        lstr_noteout-linecheck_icon   = icon_checked.
+        MODIFY gcol_noteout INDEX es_row_no-row_id FROM lstr_noteout
+        TRANSPORTING selected linecheck_symbol linecheck_icon.
+
+        " Seta o flag de Refresh dos LINECHECK fields
+        lb_linecheck_refresh = 'X'.
+
+        gcol_notebkp[] = gcol_noteout[].
+
+      WHEN 'QMNUM'.
+        wc_coluna = e_column.
+        EXPORT wc_coluna TO MEMORY ID 'PEDK9A4U7G'.
+
+        " Busca o número da Nota e seta numa var global para ser enxergado na outra screen
+        READ TABLE gcol_noteout INTO lstr_noteout INDEX es_row_no-row_id.
+
+        " Se não há Nota nada faz (RETURN)
+        IF lstr_noteout-qmnum IS INITIAL.
+          RETURN.
+        ENDIF.
+
+        SET PARAMETER ID 'IQM' FIELD lstr_noteout-qmnum.
+
+        " Verifica se o user tem acesso a transação de edição
+        " Se o usuário tem acesso a transação de edição realiza sua chamada
+        " Senão, realiza a chamada da transação de leitura
+        CALL FUNCTION 'AUTHORITY_CHECK_TCODE'
+          EXPORTING
+            tcode  = c_transactions-noteedit
+          EXCEPTIONS
+            ok     = 0
+            not_ok = 1
+            OTHERS = 2.
+        IF sy-subrc = 0.
+          CALL TRANSACTION c_transactions-noteedit AND SKIP FIRST SCREEN.
+        ELSE.
+          CALL TRANSACTION c_transactions-noteread AND SKIP FIRST SCREEN.
+        ENDIF.
+
+        " Set LINECHECK fields
+        lstr_noteout-linecheck_symbol = sym_check_mark. " sym_printer
+        lstr_noteout-linecheck_icon   = icon_checked.
+        MODIFY gcol_noteout INDEX es_row_no-row_id FROM lstr_noteout
+        TRANSPORTING selected linecheck_symbol linecheck_icon.
+
+        " Seta o flag de Refresh dos LINECHECK fields
+        lb_linecheck_refresh = 'X'.
+
+        gcol_notebkp[] = gcol_noteout[].
+    ENDCASE.
+
+    " ..........................................................................
+    " MEDIDAS ou Demandas:NOTAS E MEDIDAS com Ordem associada (dy_dme)
+    " ..........................................................................
+    " Relatório de Medida: DoubleClick no campo da Ordem (AUFNR), Ordem Atribuida a Medida (YYAUFNR), Nota (QMNUM) ou Medida (M_QSMNUM) que chama IW22/IW23 utilizando SHDB/BDC
+  ELSEIF ( rb_med = 'X'). " OR ( rb_dem = 'X' AND  dy_dme = 'X' ).                " ### REMOÇÃO tipo DEMANDAS (rb_dem) - INÍCIO e FIM ###
+    CASE e_column.
+      WHEN 'AUFNR'.
+        wc_coluna = e_column.
+        EXPORT wc_coluna TO MEMORY ID 'PEDK9A4U7G'.
+
+        " Busca o número da Ordem e seta numa var global para ser enxergado na outra screen
+        READ TABLE gcol_medout INTO lstr_medout INDEX es_row_no-row_id.
+
+        " Se não há Ordem nada faz (RETURN)
+        IF lstr_medout-aufnr IS INITIAL.
+          RETURN.
+        ENDIF.
+
+        SET PARAMETER ID 'ANR' FIELD lstr_medout-aufnr.
+
+        " Verifica se o user tem acesso a transação de edição
+        " Se o usuário tem acesso a transação de edição realiza sua chamada
+        " Senão, realiza a chamada da transação de leitura
+        CALL FUNCTION 'AUTHORITY_CHECK_TCODE'
+          EXPORTING
+            tcode  = c_transactions-orderedit
+          EXCEPTIONS
+            ok     = 0
+            not_ok = 1
+            OTHERS = 2.
+        IF sy-subrc = 0.
+          CALL TRANSACTION c_transactions-orderedit AND SKIP FIRST SCREEN.
+        ELSE.
+          CALL TRANSACTION c_transactions-orderread AND SKIP FIRST SCREEN.
+        ENDIF.
+
+        " Set LINECHECK fields
+        lstr_medout-linecheck_symbol = sym_check_mark. " sym_printer
+        lstr_medout-linecheck_icon   = icon_checked.
+        MODIFY gcol_medout INDEX es_row_no-row_id FROM lstr_medout
+        TRANSPORTING selected linecheck_symbol linecheck_icon.
+
+        " Seta o flag de Refresh dos LINECHECK fields
+        lb_linecheck_refresh = 'X'.
+
+        gcol_medbkp[] = gcol_medout[].
+
+      WHEN 'YYAUFNR'.
+        wc_coluna = e_column.
+        EXPORT wc_coluna TO MEMORY ID 'PEDK9A4U7G'.
+
+        " Busca o número da Ordem e seta numa var global para ser enxergado na outra screen
+        READ TABLE gcol_medout INTO lstr_medout INDEX es_row_no-row_id.
+
+        " Se não há Ordem nada faz (RETURN)
+        IF lstr_medout-yyaufnr IS INITIAL.
+          RETURN.
+        ENDIF.
+
+        SET PARAMETER ID 'ANR' FIELD lstr_medout-yyaufnr.
+
+        " Verifica se o user tem acesso a transação de edição
+        " Se o usuário tem acesso a transação de edição realiza sua chamada
+        " Senão, realiza a chamada da transação de leitura
+        CALL FUNCTION 'AUTHORITY_CHECK_TCODE'
+          EXPORTING
+            tcode  = c_transactions-orderedit
+          EXCEPTIONS
+            ok     = 0
+            not_ok = 1
+            OTHERS = 2.
+
+        IF sy-subrc = 0.
+          CALL TRANSACTION c_transactions-orderedit AND SKIP FIRST SCREEN.
+        ELSE.
+          CALL TRANSACTION c_transactions-orderread AND SKIP FIRST SCREEN.
+        ENDIF.
+
+        " Set LINECHECK fields
+        lstr_medout-linecheck_symbol = sym_check_mark. " sym_printer
+        lstr_medout-linecheck_icon   = icon_checked.
+        MODIFY gcol_medout INDEX es_row_no-row_id FROM lstr_medout
+        TRANSPORTING selected linecheck_symbol linecheck_icon.
+
+        " Seta o flag de Refresh dos LINECHECK fields
+        lb_linecheck_refresh = 'X'.
+
+        gcol_medbkp[] = gcol_medout[].
+
+      WHEN 'QMNUM'.
+        wc_coluna = e_column.
+        EXPORT wc_coluna TO MEMORY ID 'PEDK9A4U7G'.
+
+        " Busca o número da Nota e seta numa var global para ser enxergado na outra screen
+        READ TABLE gcol_medout INTO lstr_medout INDEX es_row_no-row_id.
+
+        " Se não há Nota nada faz (RETURN)
+        IF lstr_medout-qmnum IS INITIAL.
+          RETURN.
+        ENDIF.
+
+        SET PARAMETER ID 'IQM' FIELD lstr_medout-qmnum.
+
+        " Verifica se o user tem acesso a transação de edição
+        " Se o usuário tem acesso a transação de edição realiza sua chamada
+        " Senão, realiza a chamada da transação de leitura
+        CALL FUNCTION 'AUTHORITY_CHECK_TCODE'
+          EXPORTING
+            tcode  = c_transactions-noteedit
+          EXCEPTIONS
+            ok     = 0
+            not_ok = 1
+            OTHERS = 2.
+        IF sy-subrc = 0.
+          CALL TRANSACTION c_transactions-noteedit AND SKIP FIRST SCREEN.
+        ELSE.
+          CALL TRANSACTION c_transactions-noteread AND SKIP FIRST SCREEN.
+        ENDIF.
+
+        " Set LINECHECK fields
+        lstr_medout-linecheck_symbol = sym_check_mark. " sym_printer
+        lstr_medout-linecheck_icon   = icon_checked.
+        MODIFY gcol_medout INDEX es_row_no-row_id FROM lstr_medout
+        TRANSPORTING selected linecheck_symbol linecheck_icon.
+
+        " Seta o flag de Refresh dos LINECHECK fields
+        lb_linecheck_refresh = 'X'.
+
+        gcol_medbkp[] = gcol_medout[].
+*$*$ ----------------------------------------------------------------------------------------------------------------------------------------------------*$*$
+*$*$ 01/12/2011 | ABAPXZFE   | Request: PE2K921865(XU86) /// Task: PE2K921866(ABAPXZFE).                                                                 *$*$
+*$*$                         | Desemvolvimento: PM2064-PM2053-Inclu/Vinculo /// Ord PM às Notas ZR NTI-227414-NTI-221243 /// Solmam: 5000043167.         *$*$
+*$*$ ----------------------------------------------------------------------------------------------------------------------------------------------------*$*$
+        " Se a coluna for 'Medida' (M_QSMNUM) executa a transação IW22 ou IW23 navegando via SHDB/BDC até a respectiva Medida dentro da aba Recomendação
+        " IMPORTANTE: Implementação frágil devido às atualizações que mudam os elementos de tela refletindo na execução do SHDB/BDC (atualmente com erro ao executar)
+      WHEN 'M_QSMNUM'.
+        wc_coluna = e_column.
+        EXPORT wc_coluna TO MEMORY ID 'PEDK9A4U7G'.
+
+        " Busca o número da Nota e seta numa var global para ser enxergado na outra screen
+        READ TABLE gcol_medout INTO lstr_medout INDEX es_row_no-row_id.
+
+        " Se não há Nota nada faz (RETURN)
+        IF lstr_medout-m_qsmnum IS INITIAL.
+          RETURN.
+        ENDIF.
+
+        SET PARAMETER ID 'IQM' FIELD lstr_medout-qmnum.
+
+        " Verifica se o user tem acesso a transação de edição
+        " Se o usuário tem acesso a transação de edição realiza sua chamada
+        " Senão, realiza a chamada da transação de leitura
+        CALL FUNCTION 'AUTHORITY_CHECK_TCODE'
+          EXPORTING
+            tcode  = c_transactions-noteedit
+          EXCEPTIONS
+            ok     = 0
+            not_ok = 1
+            OTHERS = 2.
+
+        IF sy-subrc = 0.
+          SET PARAMETER ID 'IQM' FIELD lstr_medout-qmnum.
+
+          " Verifica se o user tem acesso a transação de edição
+          " Se o usuário tem acesso a transação de edição realiza sua chamada
+          " Senão, realiza a chamada da transação de leitura
+          CALL FUNCTION 'AUTHORITY_CHECK_TCODE'
+            EXPORTING
+              tcode  = c_transactions-noteedit
+            EXCEPTIONS
+              ok     = 0
+              not_ok = 1
+              OTHERS = 2.
+
+          IF sy-subrc = 0.
+            IF NOT lstr_medout IS INITIAL.
+*--PM2064 -   Seleção de dados com base na estutura lstr_medou.
+*--PM2064 -   Não selecionar marcados para eliminação kzloesch = 'X'.
+
+**            Notas Medidas Selecionada
+*             READ TABLE it_viqmsm INDEX 1 INTO wa_viqmsm.
+
+*             Nota Itens com base na medida selecionada
+              SELECT * INTO TABLE itt_viqmfe FROM viqmfe WHERE qmnum = lstr_medout-qmnum
+              AND kzloesch = ' '.
+              IF sy-subrc = 0.
+*               recupera dados do item selecionado pelo usuário
+                READ TABLE itt_viqmfe INTO wat_viqmfe WITH KEY qmnum = lstr_medout-qmnum
+                fenum = lstr_medout-m_fenum.
+              ENDIF.
+*             Todas Notas medidas com base na medida selecionada não marcada para eliminação
+              SELECT * INTO TABLE itt_viqmsm FROM viqmsm WHERE qmnum = lstr_medout-qmnum
+              AND fenum = lstr_medout-m_fenum
+              AND kzloesch = ' '.
+              IF sy-subrc = 0.
+*               Somente a nota medida selecionada
+                READ TABLE itt_viqmsm INTO wat_viqmsm WITH KEY qmnum  = lstr_medout-qmnum
+                fenum  = lstr_medout-m_fenum
+                qsmnum = lstr_medout-m_qsmnum.
+              ENDIF.
+*             Notas ação com base na medida selecionada não marcada para eliminação
+              SELECT * INTO TABLE itt_viqmma FROM viqmma WHERE qmnum = lstr_medout-qmnum
+              AND fenum = lstr_medout-m_fenum
+              AND kzloesch = ' '.
+              IF sy-subrc = 0.
+*               Seleciona somente a ação da medida
+                READ TABLE itt_viqmma INTO wat_viqmma WITH KEY qmnum = lstr_medout-qmnum
+                fenum = lstr_medout-m_fenum.
+              ENDIF.
+            ENDIF.
+
+*           configura o id iqm da tela para o campo nota receber o valor na nota corrente
+            SET PARAMETER ID 'IQM' FIELD lstr_medout-qmnum.
+
+            " Verifica se o user tem acesso a transação de edição
+            " Se o usuário tem acesso a transação de edição realiza sua chamada
+            " Senão, realiza a chamada da transação de leitura
+            CALL FUNCTION 'AUTHORITY_CHECK_TCODE'
+              EXPORTING
+                tcode  = c_transactions-noteedit
+              EXCEPTIONS
+                ok     = 0
+                not_ok = 1
+                OTHERS = 2.
+
+            IF sy-subrc = 0.
+*   ----------------------------------------------------------------------
+              REFRESH ti_bdc_tab.
+*   ----------------------------------------------------------------------
+
+              PERFORM ys_carga_bdctab USING:
+
+                    'X'    'SAPLIQS0'        '0100',
+                    ' '    'BDC_OKCODE'       '/00',
+                    ' '    'BDC_CURSOR'       'RIWO00-QMNUM',
+                    ' '    'RIWO00-QMNUM'     lstr_medout-qmnum.  " nota
+
+              PERFORM ys_carga_bdctab USING:
+
+                    'X'    'SAPLIQS0'         '7200',
+                    ' '    'BDC_OKCODE'       '=10\TAB10',
+                    ' '    'BDC_SUBSCR'       'SAPLIQS0                                1050SCREEN_1',
+                    ' '    'BDC_CURSOR'       'VIQMEL-QMTXT',
+                    ' '    'BDC_SUBSCR'       'SAPLQM07                                3000ACTION-BOX',
+                    ' '    'BDC_SUBSCR'       'SAPLIQS0                                7235SUB_GROUP_10',
+                    ' '    'BDC_SUBSCR'       'SAPLIQS0                                7212CUSTOM_SCREEN',
+                    ' '    'BDC_SUBSCR'       'SAPLIQS0                                7322SUBSCREEN_1',
+                    ' '    'BDC_SUBSCR'       'SAPLIWO1                                0140OBJEKT',
+                    ' '    'BDC_SUBSCR'       'SAPLIQS0                                7740SUBSCREEN_2',
+                    ' '    'BDC_SUBSCR'       'SAPMQM00                                0700BELEG',
+                    ' '    'BDC_SUBSCR'       'SAPLIQS0                                7326SUBSCREEN_3',
+                    ' '    'BDC_SUBSCR'       'SAPLIPAR                                0400INTPAR',
+                    ' '    'BDC_SUBSCR'       'SAPLIPAR                                0450VERA',
+                    ' '    'BDC_SUBSCR'       'SAPLIQS0                                7330SUBSCREEN_4',
+                    ' '    'BDC_SUBSCR'       'SAPLIQS0                                7715SUBSCREEN_5'.
+
+*   ----------------------------------------------------------------------
+*             item selecionado na tela - viqmfe-posnr
+              DATA: lc_viqmfe_posnr TYPE string.
+*             linha marcada
+              DATA: lc_riwo00_selec TYPE string.
+*   ----------------------------------------------------------------------
+*             variável para armazenar valor da linha em foco na tela
+              DATA: lc_cont_lin TYPE n.
+*             número sequencial do registro para item viqmfe
+*             número de de registros na tela = 9
+              DATA no_seq_reg_viqmfe        TYPE n LENGTH 4.
+*             número da linha na tela
+              DATA no_linha_tela_viqmfe     TYPE n LENGTH 4.
+*             número de pgndn até o registros
+              DATA no_pgdn_to_reg_viqmfe    TYPE i.
+*             número a ser somado na paginação
+              DATA: no_to_add_to_pgdn_viqmfe TYPE i.
+*   ----------------------------------------------------------------------
+
+              SORT itt_viqmfe BY fenum posnr.
+
+              CLEAR: lc_cont_lin.
+
+*             rotina para atribuir a linha a ser exibida na tela
+              LOOP AT itt_viqmfe INTO wat_viqmfe.
+
+                IF lc_cont_lin = 0.
+
+                  ADD 1 TO lc_cont_lin.
+                  wat_viqmfe-no_linha = lc_cont_lin.
+                  MODIFY itt_viqmfe FROM wat_viqmfe.
+
+                ELSEIF lc_cont_lin = 1.
+
+                  ADD 1 TO lc_cont_lin.
+                  wat_viqmfe-no_linha = lc_cont_lin.
+                  MODIFY itt_viqmfe FROM wat_viqmfe.
+
+                ELSEIF lc_cont_lin = 2.
+
+                  ADD 1 TO lc_cont_lin.
+                  wat_viqmfe-no_linha = lc_cont_lin.
+                  MODIFY itt_viqmfe FROM wat_viqmfe.
+
+                ELSEIF lc_cont_lin = 3.
+
+                  ADD 1 TO lc_cont_lin.
+                  wat_viqmfe-no_linha = lc_cont_lin.
+                  MODIFY itt_viqmfe FROM wat_viqmfe.
+
+                ELSEIF lc_cont_lin = 4.
+
+                  ADD 1 TO lc_cont_lin.
+                  wat_viqmfe-no_linha = lc_cont_lin.
+                  MODIFY itt_viqmfe FROM wat_viqmfe.
+
+                ELSEIF lc_cont_lin = 5.
+
+                  ADD 1 TO lc_cont_lin.
+                  wat_viqmfe-no_linha = lc_cont_lin.
+                  MODIFY itt_viqmfe FROM wat_viqmfe.
+
+                ELSEIF lc_cont_lin = 6.
+
+                  ADD 1 TO lc_cont_lin.
+                  wat_viqmfe-no_linha = lc_cont_lin.
+                  MODIFY itt_viqmfe FROM wat_viqmfe.
+
+                ELSEIF lc_cont_lin = 7.
+
+                  ADD 1 TO lc_cont_lin.
+                  wat_viqmfe-no_linha = lc_cont_lin.
+                  MODIFY itt_viqmfe FROM wat_viqmfe.
+
+                ELSEIF lc_cont_lin = 8.
+
+                  ADD 1 TO lc_cont_lin.
+                  wat_viqmfe-no_linha = lc_cont_lin.
+                  MODIFY itt_viqmfe FROM wat_viqmfe.
+                  lc_cont_lin = 0.
+
+                ENDIF.
+
+              ENDLOOP.
+
+*             Esta rotina localiza o registro selecionado na tela, o sequencial na tebela interna e número da linha a a ser exibido na tela
+              LOOP AT itt_viqmfe INTO wat_viqmfe.
+                IF wat_viqmfe-fenum = lstr_medout-m_fenum AND
+                wat_viqmfe-posnr = lstr_medout-m_posnr.
+
+*                 Número sequencial do registro
+                  no_seq_reg_viqmfe    = sy-tabix.
+*                 Número da linha ser exibido na tela
+                  no_linha_tela_viqmfe = wat_viqmfe-no_linha.
+                  EXIT.
+                ENDIF.
+              ENDLOOP.
+
+*             Se sequencial maior que 9 calcular quantos pgdn
+              IF no_seq_reg_viqmfe > 9. " tot de linhas na tela
+                no_pgdn_to_reg_viqmfe       = no_seq_reg_viqmfe DIV 9.
+                no_to_add_to_pgdn_viqmfe    = no_seq_reg_viqmfe - ( no_pgdn_to_reg_viqmfe * 9 ).
+                IF no_to_add_to_pgdn_viqmfe = 0.
+                  no_pgdn_to_reg_viqmfe     = no_pgdn_to_reg_viqmfe - 1.
+                ENDIF.
+              ENDIF.
+
+              IF no_seq_reg_viqmfe > 9.
+                DO no_pgdn_to_reg_viqmfe TIMES.
+                  PERFORM ys_carga_bdctab USING:
+                        'X'    'SAPLIQS0'         '7204',
+                        ' '    'BDC_OKCODE'      '=PNPG'.
+                ENDDO.
+              ENDIF.
+*   ----------------------------------------------------------------------
+              CONCATENATE 'VIQMFE-POSNR(' no_linha_tela_viqmfe  ')' INTO lc_viqmfe_posnr.
+              CONCATENATE 'RIWO00-SELEC(' no_linha_tela_viqmfe  ')' INTO lc_riwo00_selec.
+*   ----------------------------------------------------------------------
+
+              PERFORM ys_carga_bdctab USING:
+                    'X'    'SAPLIQS0'         '7204',
+                    ' '    'BDC_OKCODE'       '=20\TAB03',
+                    ' '    'BDC_SUBSCR'       'SAPLIQS0                                1050SCREEN_1',
+                    ' '    'BDC_SUBSCR'       'SAPLQM07                                3000ACTION-BOX',
+                    ' '    'BDC_SUBSCR'       'SAPLIQS0                                7210SUB_GROUP_10',
+                    ' '    'BDC_SUBSCR'       'SAPLIQS0                                7110SUB_GROUP_20',
+                    ' '    'BDC_CURSOR'       lc_viqmfe_posnr,
+                    ' '    lc_riwo00_selec   'X'.
+
+*   ----------------------------------------------------------------------
+*   ----------------------------------------------------------------------
+*             número sequencial do registro para item viqmfe número de de registros na tela = 9
+              DATA no_seq_reg_viqmsm        TYPE n LENGTH 4.
+*             número da linha na tela
+              DATA no_linha_tela_viqmsm     TYPE n LENGTH 4.
+*             número de pgndn até o registros
+              DATA no_pgdn_to_reg_viqmsm    TYPE i.
+*             número a ser somado na paginação
+              DATA: no_to_add_to_pgdn_viqmsm TYPE i.
+*   ----------------------------------------------------------------------
+
+              CLEAR: lc_cont_lin.
+
+              LOOP AT itt_viqmsm INTO wat_viqmsm.
+
+                IF lc_cont_lin = 0.
+
+                  ADD 1 TO lc_cont_lin.
+                  wat_viqmsm-no_linha = lc_cont_lin.
+                  MODIFY itt_viqmsm FROM wat_viqmsm.
+
+                ELSEIF lc_cont_lin = 1.
+
+                  ADD 1 TO lc_cont_lin.
+                  wat_viqmsm-no_linha = lc_cont_lin.
+                  MODIFY itt_viqmsm FROM wat_viqmsm.
+
+                ELSEIF lc_cont_lin = 2.
+
+                  ADD 1 TO lc_cont_lin.
+                  wat_viqmsm-no_linha = lc_cont_lin.
+                  MODIFY itt_viqmsm FROM wat_viqmsm.
+                  lc_cont_lin = 0.
+
+                ENDIF.
+
+              ENDLOOP.
+
+              SORT itt_viqmsm BY manum fenum qsmnum.
+
+              LOOP AT itt_viqmsm INTO wat_viqmsm.
+
+                IF wat_viqmsm-manum  = lstr_medout-m_manum AND
+                wat_viqmsm-fenum  = lstr_medout-m_fenum AND
+                wat_viqmsm-qsmnum = lstr_medout-m_qsmnum.
+
+*                 Número sequencial do registro
+                  no_seq_reg_viqmsm = sy-tabix.
+*                 Número da linha ser exibido na tela
+                  no_linha_tela_viqmsm  = wat_viqmsm-no_linha.
+                  EXIT.
+                ENDIF.
+
+              ENDLOOP.
+
+              IF no_seq_reg_viqmsm  > 3. " tot de linhas na tela
+
+*               total de pages down necessários para atingir a ultima leva de 14 linhas
+                no_pgdn_to_reg_viqmsm       = no_seq_reg_viqmsm DIV 3.
+                no_to_add_to_pgdn_viqmsm    = no_seq_reg_viqmsm - ( no_pgdn_to_reg_viqmsm * 3 ).
+                IF no_to_add_to_pgdn_viqmsm = 0.
+                  no_pgdn_to_reg_viqmsm     = no_pgdn_to_reg_viqmsm - 1.
+                ENDIF.
+
+              ENDIF.
+
+              IF no_seq_reg_viqmsm > 3.
+                DO  no_pgdn_to_reg_viqmsm  TIMES.
+                  PERFORM ys_carga_bdctab USING:
+                        'X'    'SAPLIQS0'         '7204',
+                        ' '    'BDC_OKCODE'      '=PNPG'.
+                ENDDO.
+              ENDIF.
+*   ----------------------------------------------------------------------
+*             item selecionado na tela - viqmsm-qsmnum
+              DATA: lc_viqmsm_qsmnum  TYPE string.
+              DATA: lc_riwo00_selek   TYPE string.
+              DATA: lc_viqmma_qmanum  TYPE string.
+*   ----------------------------------------------------------------------
+*             item selecionado na tela - viqmsm-qsmnum
+              CONCATENATE 'VIQMSM-QSMNUM(' no_linha_tela_viqmsm ')' INTO lc_viqmsm_qsmnum.
+              CONCATENATE 'RIWO00-SELEK('  no_linha_tela_viqmsm ')' INTO lc_riwo00_selek.
+*   ----------------------------------------------------------------------
+              PERFORM ys_carga_bdctab USING:
+
+                    'X'    'SAPLIQS0'        '7204',
+                    ' '    'BDC_OKCODE'      '=20\TAB04',
+                    ' '    'BDC_SUBSCR'      'SAPLIQS0                                1050SCREEN_1',
+                    ' '    'BDC_SUBSCR'      'SAPLQM07                                3000ACTION-BOX',
+                    ' '    'BDC_SUBSCR'      'SAPLIQS0                                7210SUB_GROUP_10',
+                    ' '    'BDC_SUBSCR'      'SAPLIQS0                                7125SUB_GROUP_20',
+                    ' '    'BDC_SUBSCR'      'SAPLIQS0                                7112POSITION',
+                    ' '    'BDC_CURSOR'       lc_viqmsm_qsmnum,
+                    ' '    lc_riwo00_selek   'X'.
+*   ----------------------------------------------------------------------
+*   ----------------------------------------------------------------------
+*             número sequencial do registro para item viqmfe
+*             número de de registros na tela = 9
+              DATA no_seq_reg_viqmma         TYPE n LENGTH 4.
+*             número da linha na tela
+              DATA no_linha_tela_viqmma      TYPE n LENGTH 4.
+*             número de pgndn até o registros
+              DATA no_pgdn_to_reg_viqmma     TYPE i.
+*             número a ser somado na paginação
+              DATA: no_to_add_to_pgdn_viqmma TYPE i.
+*   ----------------------------------------------------------------------
+              CLEAR: lc_cont_lin.
+*             adicionar mais um registros
+              CLEAR: wat_viqmma.
+              wat_viqmma-mandt = sy-mandt.
+              wat_viqmma-qmnum = wat_viqmsm-qmnum.
+              APPEND wat_viqmma TO itt_viqmma.
+
+              LOOP AT itt_viqmma INTO wat_viqmma.
+                IF lc_cont_lin = 0.
+                  ADD 1 TO lc_cont_lin.
+                  wat_viqmma-no_linha = lc_cont_lin.
+                  MODIFY itt_viqmma FROM wat_viqmma.
+
+                ELSEIF lc_cont_lin = 1.
+
+                  ADD 1 TO lc_cont_lin.
+                  wat_viqmma-no_linha = lc_cont_lin.
+                  MODIFY itt_viqmma FROM wat_viqmma.
+
+                ELSEIF lc_cont_lin = 2.
+
+                  ADD 1 TO lc_cont_lin.
+                  wat_viqmma-no_linha = lc_cont_lin.
+                  MODIFY itt_viqmma FROM wat_viqmma.
+                  lc_cont_lin = 0.
+                ENDIF.
+              ENDLOOP.
+
+              SORT itt_viqmma BY manum fenum qmanum.
+
+              LOOP AT itt_viqmma INTO wat_viqmma.
+*               Nomero da linha na  da medida escolhida
+                no_seq_reg_viqmma  = sy-tabix.
+                no_linha_tela_viqmma = wat_viqmma-no_linha.
+              ENDLOOP.
+*   ----------------------------------------------------------------------
+**             Incrementa uma unidade para ser incluído na paginação
+*              no_seq_reg_viqmma  = no_seq_reg_viqmma + 1.
+*   ----------------------------------------------------------------------
+              IF no_seq_reg_viqmma > 3. " tot de linhas na tela
+*               total de pages down necessários para atingir a ultima leva de 14 linhas
+                no_pgdn_to_reg_viqmma       = no_seq_reg_viqmma DIV 3.
+                no_to_add_to_pgdn_viqmma    = no_seq_reg_viqmma - ( no_pgdn_to_reg_viqmma * 3 ).
+                IF no_to_add_to_pgdn_viqmma = 0.
+                  no_pgdn_to_reg_viqmma     = no_pgdn_to_reg_viqmma - 1.
+                ENDIF.
+              ENDIF.
+*   ----------------------------------------------------------------------
+              IF no_seq_reg_viqmma > 3.
+                DO no_pgdn_to_reg_viqmma TIMES.
+                  PERFORM ys_carga_bdctab USING:
+                        'X'    'SAPLIQS0'         '7204',
+                        ' '    'BDC_OKCODE'      '=PNPG'.
+                ENDDO.
+
+                PERFORM ys_carga_bdctab USING:
+                      'X'    'SAPLIQS0'         '7204',
+                      ' '    'BDC_OKCODE'      '=PEND'.
+              ENDIF.
+*   ----------------------------------------------------------------------
+*             verifica se a ordemestá abera ou fechada
+              DATA: lc_objnr    TYPE rihqmel_list-objnr.
+              DATA: lc_osttxt   LIKE bsvx-sttxt.   "Status de Sistema (Ordem)
+              DATA: lc_oasttxt  LIKE bsvx-sttxt.   "Status de usuario (Ordem)
+              CONCATENATE 'QM' lstr_medout-qmnum INTO lc_objnr.
+
+*             Obtem Status da ordem
+              CALL FUNCTION 'STATUS_TEXT_EDIT' ##FM_SUBRC_OK
+                EXPORTING
+                  flg_user_stat = 'X'
+                  objnr         = lc_objnr "nota
+                  spras         = sy-langu
+                IMPORTING
+                  line          = lc_osttxt
+                  user_line     = lc_oasttxt
+                EXCEPTIONS
+                  OTHERS        = 1.
+
+              IF lc_osttxt CS 'MREL'.
+                SET PARAMETER ID 'IQM' FIELD lstr_medout-qmnum.
+                CALL TRANSACTION c_transactions-noteread AND SKIP FIRST SCREEN.
+              ELSE.
+                CONCATENATE 'VIQMMA-MNGRP(' '0003' ')' INTO lc_viqmma_qmanum.
+                CONCATENATE 'RIWO00-SELEK(' '0003' ')' INTO lc_riwo00_selek.
+
+                PERFORM ys_carga_bdctab USING:
+                      'X'    'SAPLIQS0'        '7204',
+                      ' '    'BDC_OKCODE'      'BUCH',
+                      ' '    'BDC_SUBSCR'      'SAPLIQS0                                1050SCREEN_1',
+                      ' '    'BDC_SUBSCR'      'SAPLQM07                                3000ACTION-BOX',
+                      ' '    'BDC_SUBSCR'      'SAPLIQS0                                7210SUB_GROUP_10',
+                      ' '    'BDC_SUBSCR'      'SAPLIQS0                                7135SUB_GROUP_20',
+                      ' '    'BDC_SUBSCR'      'SAPLIQS0                                7112position',
+                      ' '    lc_viqmma_qmanum   '9'.
+*   ----------------------------------------------------------------------
+                DATA: e_options TYPE ctu_params.
+
+                e_options-dismode = 'E'.
+                e_options-updmode = 'S'.
+                e_options-defsize = 'X'.
+
+                CALL TRANSACTION c_transactions-noteedit
+                USING ti_bdc_tab
+                      OPTIONS FROM e_options
+                      MESSAGES INTO ti_tabmess.
+
+                COMMIT WORK AND WAIT.
+
+              ENDIF.
+*   ----------------------------------------------------------------------
+            ELSE.
+              CALL TRANSACTION c_transactions-noteread AND SKIP FIRST SCREEN.
+            ENDIF.
+          ENDIF.
+        ENDIF.
+
+        " Set LINECHECK fields
+        lstr_medout-linecheck_symbol = sym_check_mark. " sym_printer
+        lstr_medout-linecheck_icon   = icon_checked.
+        MODIFY gcol_medout INDEX es_row_no-row_id FROM lstr_medout
+        TRANSPORTING selected linecheck_symbol linecheck_icon.
+
+        lb_linecheck_refresh = 'X'.
+
+        gcol_medbkp[] = gcol_medout[].
+
+    ENDCASE.
+
+    " ..........................................................................
+    " OPERAÇÕES
+    " ..........................................................................
+    " Relatório de Operações: DoubleClick no campo da Ordem (AUFNR) ou Nota (QMNUM)
+  ELSEIF rb_ope = 'X'.
+    CASE e_column.
+      WHEN 'AUFNR'.
+        wc_coluna = e_column.
+        EXPORT wc_coluna TO MEMORY ID 'PEDK9A4U7G'.
+
+        " Busca o número da Ordem e seta numa var global para ser enxergado na outra screen
+        READ TABLE gcol_operacoesout INTO lstr_operacoesout INDEX es_row_no-row_id.
+
+        " Se não há Ordem nada faz (RETURN)
+        IF lstr_operacoesout-aufnr IS INITIAL.
+          RETURN.
+        ENDIF.
+
+        SET PARAMETER ID 'ANR' FIELD lstr_operacoesout-aufnr.
+
+        " Verifica se o user tem acesso a transação de edição
+        " Se o usuário tem acesso a transação de edição realiza sua chamada
+        " Senão, realiza a chamada da transação de leitura
+        CALL FUNCTION 'AUTHORITY_CHECK_TCODE'
+          EXPORTING
+            tcode  = c_transactions-orderedit
+          EXCEPTIONS
+            ok     = 0
+            not_ok = 1
+            OTHERS = 2.
+        IF sy-subrc = 0.
+          CALL TRANSACTION c_transactions-orderedit AND SKIP FIRST SCREEN.
+        ELSE.
+          CALL TRANSACTION c_transactions-orderread AND SKIP FIRST SCREEN.
+        ENDIF.
+
+        " Set LINECHECK fields
+        lstr_operacoesout-linecheck_symbol = sym_check_mark. " sym_printer
+        lstr_operacoesout-linecheck_icon   = icon_checked.
+
+        MODIFY gcol_operacoesout INDEX es_row_no-row_id FROM lstr_operacoesout
+        TRANSPORTING selected linecheck_symbol linecheck_icon.
+
+        " Seta o flag de Refresh dos LINECHECK fields
+        lb_linecheck_refresh = 'X'.
+
+        gcol_operacoesbkp[] = gcol_operacoesout[].
+
+      WHEN 'QMNUM'.
+        wc_coluna = e_column.
+        EXPORT wc_coluna TO MEMORY ID 'PEDK9A4U7G'.
+
+        " Busca o número da Nota e seta numa var global para ser enxergado na outra screen
+        READ TABLE gcol_operacoesout INTO lstr_operacoesout INDEX es_row_no-row_id.
+
+        " Se não há Nota nada faz (RETURN)
+        IF lstr_operacoesout-qmnum IS INITIAL.
+          RETURN.
+        ENDIF.
+
+        SET PARAMETER ID 'IQM' FIELD lstr_operacoesout-qmnum.
+
+        " Verifica se o user tem acesso a transação de edição
+        " Se o usuário tem acesso a transação de edição realiza sua chamada
+        " Senão, realiza a chamada da transação de leitura
+        CALL FUNCTION 'AUTHORITY_CHECK_TCODE'
+          EXPORTING
+            tcode  = c_transactions-noteedit
+          EXCEPTIONS
+            ok     = 0
+            not_ok = 1
+            OTHERS = 2.
+        IF sy-subrc = 0.
+          CALL TRANSACTION c_transactions-noteedit AND SKIP FIRST SCREEN.
+        ELSE.
+          CALL TRANSACTION c_transactions-noteread AND SKIP FIRST SCREEN.
+        ENDIF.
+
+        " Set LINECHECK fields
+        lstr_operacoesout-linecheck_symbol = sym_check_mark. " sym_printer
+        lstr_operacoesout-linecheck_icon   = icon_checked.
+
+        MODIFY gcol_operacoesout INDEX es_row_no-row_id FROM lstr_operacoesout
+        TRANSPORTING selected linecheck_symbol linecheck_icon.
+
+        " Seta o flag de Refresh dos LINECHECK fields
+        lb_linecheck_refresh = 'X'.
+
+        gcol_operacoesbkp[] = gcol_operacoesout[].
+    ENDCASE.
+  ENDIF.
+
+*------------------------------------------PM2064
+*$*$ -----------------------------------------------------------------------*$*$
+*$*$ 01/12/2011 | ABAPXZFE   | Request: PE2K921865(XU86)                    *$*$
+*$*$                         | Task: PE2K921866(ABAPXZFE).                  *$*$
+*$*$                         | Desemvolvimento: PM2064-PM2053-Inclu/Vinculo *$*$
+*$*$                         | Ord PM às Notas ZR NTI-227414-NTI-221243     *$*$
+*$*$                         | Solmam: 5000043167.                          *$*$
+*$*$ ---------------------------------------------------------------------- *$*$
+
+  " Realiza o Refresh dos LINECHECK fields (Dados não sofrem refresh)
+  IF lb_linecheck_refresh = 'X'.
+    " OBS IMPORTANTE: Poderia ser utilizada o método SET_FUNCTION_CODE para forçar o Refresh
+    "                 porém os dados de LineCheckFields seriam perdidos no refresh
+    " Implementação futura: Os dados também deveriam sofrer refresh
+    CALL METHOD gr_grid->raise_event
+      EXPORTING
+        i_ucomm         = '&LINECHECK_REFRESH'
+        i_user_command  = 'A'
+        i_not_processed = space.
+  ENDIF.
+
+ENDFORM.                    "f_handle_double_click
+*&---------------------------------------------------------------------*
+*&      Form  YS_CARGA_BDCTAB
+*&---------------------------------------------------------------------*
+*       YS_CARGA_BDCTAB
+*----------------------------------------------------------------------*
+*   dynbegin ==> Indica se o registro a ser montado é uma tela
+*   name     ==> Nome do programa (tela) ou do campo
+*   value    ==> Número da Tela (tela) ou valor do campo
+*----------------------------------------------------------------------*
+*   Esta rotina permite a montagem da tabela do Batch Input.
+*----------------------------------------------------------------------*
+FORM ys_carga_bdctab USING dynbegin name value.
+
+  CLEAR ti_bdc_tab.
+  IF dynbegin = 'X'.
+    ti_bdc_tab-dynbegin = 'X'.
+    ti_bdc_tab-program  = name.
+    ti_bdc_tab-dynpro   = value.
+  ELSE.
+    ti_bdc_tab-fnam     = name.
+    ti_bdc_tab-fval     = value.
+  ENDIF.
+
+  APPEND ti_bdc_tab.
+
+ENDFORM.                    " ys_CARGA_BDCTAB
+*&---------------------------------------------------------------------*
+*&      Form  CRIA_PLANILHA
+*&---------------------------------------------------------------------*
+*       text
+*----------------------------------------------------------------------*
+*  -->  p1        text
+*  <--  p2        text
+*----------------------------------------------------------------------*
+FORM cria_planilha .
+  DATA: lstr_orderout2 LIKE LINE OF gcol_orderout,
+        v_name_order   LIKE thead-tdname,
+        v_tabix        LIKE sy-tabix,       " amss 23/10/2023
+        v_fenum        TYPE qmfe-fenum,     " amss 18/10/2023
+        v_qmnum        TYPE qmfe-qmnum,     " amss 18/10/2023
+        v_name_ope     LIKE thead-tdname,
+** INÍCIO - 12.08.2021 11:16:52 - ABAPD94R
+        v_name_con     LIKE thead-tdname,
+        v_name_trf     LIKE thead-tdname,
+        v_name_doc     LIKE thead-tdname,
+** FIM - 12.08.2021 11:16:52 - ABAPD94R
+        ti_lines       LIKE tline OCCURS 0 WITH HEADER LINE,
+        v_id           LIKE thead-tdid,
+        v_object       LIKE thead-tdobject.
+  DATA: it_aux_o TYPE  ty_orderout,   " tab. auxiliar para tratamento do txt longo
+        it_aux_n TYPE  ty_noteout,    " tab. auxiliar para tratamento do txt longo
+        it_aux_m TYPE  ty_med,        " tab. auxiliar para tratamento do txt longo
+        it_aux_p TYPE  ty_operacoes.  " tab. auxiliar para tratamento do txt longo
+  DATA: lc_txt_str TYPE string,       " variavel para concatenar txt longo
+        lc_cont    TYPE n.               " Contador para string do txt longo
+
+  " xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  " DEFINIÇÃO DOS CAMPOS E ORDENAÇÃO DOS DADOS A SEREM EXPORTADOS (FIELDCATALOG e SORT) DE ACORDO COM O TIPO DE EXECUÇÃO (BACKGROUND OU ON-LINE) - INÍCIO
+  " xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  " Se a exportação é VIA EXECUÇÃO ON-LINE (via ALV) [gv_export_online_or_backgrd = ABAP_TRUE]
+  IF gv_export_online_or_backgrd = abap_true.
+    " Se o objeto gr_grid da ALV estiver instanciado, atualiza o catálogo com alterações efetuadas pelo usuário durante a execução para a exportação
+    " SENÃO se estiver NÃO-INSTANCIADO, retorna (cenário pouco provável que durante a execução ON-LINE o objeto gr_grid estar não-INSTANCIADO)
+    IF gr_grid IS NOT INITIAL.
+      gr_grid->get_frontend_fieldcatalog( IMPORTING et_fieldcatalog = git_fieldcat ).
+    ELSE.
+      RETURN.
+    ENDIF.
+
+    " Se a exportação é VIA EXECUÇÃO BACKGROUND [gv_export_online_or_backgrd = ABAP_FALSE] e POR PLANILHA [gv_export_bkg_spool_or_wsheet = ABAP_FALSE]
+    " Obs.: O cenário de exportação VIA EXECUÇÃO BACKGROUND [gv_export_online_or_backgrd = ABAP_FALSE] e POR SPOOL [gv_export_bkg_spool_or_wsheet = ABAP_TRUE] não realiza exportação
+  ELSEIF gv_export_online_or_backgrd = abap_false AND gv_export_bkg_spool_or_wsheet = abap_false.
+    DATA: ls_report_curr    TYPE ltdx-report,
+          ls_ltvariant_curr TYPE ltdx-variant.
+    DATA: ls_ltvariantkey_curr  TYPE ltdxkey.
+
+    DATA: lt_fcat_curr TYPE STANDARD TABLE OF ltdxdata,
+          ls_fcat_curr TYPE ltdxdata,
+          lt_sort_curr TYPE STANDARD TABLE OF ltdxdata,
+          ls_sort_curr TYPE ltdxdata.
+    DATA: ti_dfies_tab TYPE TABLE OF dfies.
+
+    " Se foi informado VARIANTE DE EXIBIÇÃO DA TELA DE SELEÇÃO (gstr_lvaria-variant), define-a como a VARIANTE DE EXIBIÇÃO CORRENTE
+    IF gstr_lvaria-variant IS NOT INITIAL.
+      ls_report_curr    = sy-repid.                                                            " Seta o programa/report em execução (SY-CPROG)
+      ls_ltvariant_curr = gstr_lvaria-variant.                                                 " Há uma conversão de dados nesta atribuição
+      " Senão, se NÃO foi informado VARIANTE DE EXIBIÇÃO DA TELA DE SELEÇÃO, define a VARIANTE DE EXIBIÇÃO DEFAULT do programa/report em execução como a VARIANTE DE EXIBIÇÃO CORRENTE
+    ELSE.
+      DATA: lstr_default_layout_info TYPE salv_s_layout_info,
+            lstr_layout_key          TYPE salv_s_layout_key.
+      lstr_layout_key-report    = sy-repid.                                                           " Seta o programa/report em execução
+      lstr_default_layout_info  = cl_salv_layout_service=>get_default_layout( lstr_layout_key ).      " Busca VARIANTE DE EXIBIÇÃO DEFAULT do programa/report
+      ls_report_curr            = sy-repid.                                                           " Seta o programa/report em execução (SY-CPROG)
+      ls_ltvariant_curr         = lstr_default_layout_info-layout.
+    ENDIF.
+
+    " Define a chave da VARIANTE DE EXIBIÇÃO CORRENTE (ls_ltvariantkey_curr) para busca do FieldCatalog, Sort e Filter do relatório
+    SELECT SINGLE report handle log_group username variant type "#EC CI_NOORDER or "#EC WARNOK
+      INTO ls_ltvariantkey_curr                                  " CONCATENAÇÃO DIRETA dos campos para montar a chave
+      FROM ltdx
+     WHERE relid   = 'LT'
+       AND report  = ls_report_curr             " Nome do programa/report em execução
+       AND variant = ls_ltvariant_curr.         " VARIANTE DE EXIBIÇÃO CORRENTE
+
+    " Busca o FieldCatalog, Sort e Filter do relatório da VARIANTE DE EXIBIÇÃO CORRENTE (ls_ltvariant_curr) a partir da sua chave (ls_ltvariantkey_curr)
+    CALL FUNCTION 'LT_DBDATA_READ_FROM_LTDX'
+      EXPORTING
+        "i_tool       = 'LT'          DEFAULT 'LT'
+        is_varkey    = ls_ltvariantkey_curr
+      TABLES
+        t_dbfieldcat = lt_fcat_curr
+        t_dbsortinfo = lt_sort_curr
+        "t_dbfilter   = lt_filt_curr         " NÃO UTILIZADO NO CONTEXTO ATUAL
+      EXCEPTIONS
+        not_found    = 1
+        wrong_relid  = 2
+        OTHERS       = 3.
+    IF sy-subrc = 0.
+      " ........................................................................................................................................................
+      " Altera a Posição, Visibilidade e Tamanho dos campos a serem exportados para a PLANILHA de acordo com o FieldCatalogo da VARIANTE DE EXIBIÇÃO CORRENTE
+      " ........................................................................................................................................................
+      " Percorre cada campo do FieldCatalog ORIGINAL (criado no início do relatório) e o altera de acordo com o FieldCatalog da VARIANTE DE EXIBIÇÃO CORRENTE (lt_fcat_curr)
+      LOOP AT git_fieldcat ASSIGNING FIELD-SYMBOL(<lstr_fieldcat>).
+        " Percorre a ITable de FieldCatalog da VARIANTE DE EXIBIÇÃO CORRENTE (lt_fcat_curr) para definir os atributos que serão relevantes para a PLANILHA
+        LOOP AT lt_fcat_curr INTO DATA(l_wa_fcat_curr)
+          WHERE key1 = <lstr_fieldcat>-fieldname AND ( param = 'COL_POS' OR param = 'NO_OUT' OR param = 'OUTPUTLEN' ) .
+          CASE l_wa_fcat_curr-param.
+            WHEN 'COL_POS'.
+              <lstr_fieldcat>-col_pos = l_wa_fcat_curr-value.
+            WHEN 'NO_OUT'.
+              <lstr_fieldcat>-no_out = l_wa_fcat_curr-value.
+              " Se a coluna será apresentada na exportação da PLANILHA, busca seu DATATYPE de acordo com o campo e a tabela de referência (ref_field e ref_table)
+              IF l_wa_fcat_curr-value = abap_false.
+                " Busca o tipo de dados do campo e tabela da coluna do FieldCatalog (IMPORTANTE para montar os estilos e convertes os dados no XLS/XML a ser exportado)
+                REFRESH ti_dfies_tab[].
+                CALL FUNCTION 'DDIF_FIELDINFO_GET'
+                  EXPORTING
+                    tabname   = <lstr_fieldcat>-ref_table
+                    fieldname = <lstr_fieldcat>-ref_field
+                  TABLES
+                    dfies_tab = ti_dfies_tab
+                  EXCEPTIONS
+                    OTHERS    = 1.
+                IF sy-subrc = 0.
+                  READ TABLE ti_dfies_tab[] INTO DATA(wa_dfies_tab) INDEX 1.
+                  IF sy-subrc = 0.
+                    <lstr_fieldcat>-datatype = wa_dfies_tab-datatype.
+                  ENDIF.
+                ENDIF.
+              ENDIF.
+            WHEN 'OUTPUTLEN'.
+              <lstr_fieldcat>-outputlen = l_wa_fcat_curr-value.
+          ENDCASE.
+        ENDLOOP.
+      ENDLOOP.
+
+      " ORDENA o FieldCatalog ORIGINAL (git_fieldcat) pela coluna col_pos para que na PLANILHA as colunas/campos estejam na sequência definida na VARIANTE DE EXIBIÇÃO CORRENTE
+      SORT git_fieldcat BY no_out ASCENDING col_pos ASCENDING.
+
+      " ...........................................................................................................................................
+      " Altera a ORDENAÇÃO DOS DADOS a serem exportados para a PLANILHA de acordo com o SORT da VARIANTE DE EXIBIÇÃO CORRENTE (lt_sort_curr)
+      " ...........................................................................................................................................
+      DATA: lt_bkg_wsheet_sortorder TYPE                   abap_sortorder_tab,
+            ls_bkg_wsheet_sortorder LIKE LINE OF           lt_bkg_wsheet_sortorder.
+      " Remove todas as linhas irrelevantes da ITable de SORT da VARIANTE DE EXIBIÇÃO CORRENTE (lt_sort_curr) para construção da ITable de ordenação final (lt_bkg_wsheet_sortorder)
+      DELETE lt_sort_curr WHERE param <> 'SPOS' AND param <> 'DOWN'.
+
+      " Ordena a a ITable de SORT da VARIANTE DE EXIBIÇÃO CORRENTE (lt_sort_curr) para que as primeiras linhas sejam os campos do SORT final na sequência desejada, as outras linhas serão ref a ASC/DESC
+      SORT lt_sort_curr BY param DESCENDING value ASCENDING.
+
+      " Percorre a ITable de SORT da VARIANTE DE EXIBIÇÃO CORRENTE (lt_sort_curr) e monta uma ITable de ordenação final (lt_bkg_wsheet_sortorder)
+      LOOP AT lt_sort_curr INTO ls_sort_curr.
+        " Sort by given column in a stable way
+        ls_bkg_wsheet_sortorder-name       = ls_sort_curr-key1.
+
+        " Se for PARAM = SPOS adiciona nova linha ref ao campo na ITable de ordenação final (lt_bkg_wsheet_sortorder)
+        IF ls_sort_curr-param = 'SPOS'.
+          ls_bkg_wsheet_sortorder-astext     = abap_false.
+          ls_bkg_wsheet_sortorder-descending = abap_false.
+          APPEND ls_bkg_wsheet_sortorder TO lt_bkg_wsheet_sortorder.
+          " Senão (se não for PARAM = SPOS), é PARAM = 'DOWN' e definido como DESCENDING (value = TRUE) busca a linha do respectivo campo para atualizar o ASC/DESC como DESCENDING (=TRUE)
+        ELSE.
+          IF ls_sort_curr-param = 'DOWN' AND ls_sort_curr-value = abap_true.
+            ls_bkg_wsheet_sortorder-astext     = abap_false.
+            ls_bkg_wsheet_sortorder-descending = abap_true.
+            MODIFY lt_bkg_wsheet_sortorder FROM ls_bkg_wsheet_sortorder TRANSPORTING descending WHERE name = ls_bkg_wsheet_sortorder-name.
+          ENDIF.
+        ENDIF.
+      ENDLOOP.
+    ENDIF.
+  ENDIF.
+
+  " Se não tem fieldcatalog retorna
+  IF git_fieldcat[] IS INITIAL.
+    RETURN.
+  ENDIF.
+  " xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  " DEFINIÇÃO DOS CAMPOS E ORDENAÇÃO DOS DADOS A SEREM EXPORTADOS (FIELDCATALOG e SORT) DE ACORDO COM O TIPO DE EXECUÇÃO (BACKGROUND OU ON-LINE) - FIM
+  " xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+  " ===============================================================================================================================
+  " Exporta e exibe de acordo com o Tipo de Filtro setado (radiobutton rb_order, rb_note ou rb_med, rb_dem)
+  " ===============================================================================================================================
+  DATA: obj_xml         TYPE REF TO cl_ti_excel.        " INICIALIZAÇÃO DO XML [DECLARAÇÃO]
+  CREATE OBJECT obj_xml. " INICIALIZAÇÃO DO XML [INSTANCIAÇÃO]
+
+** INÍCIO - 23.08.2021 17:10:13 - ABAPD94R
+  IF gv_doc = 'X'.
+    CLEAR: it_excel_doc, ti_lines.
+
+*    " Ordena a ITable dos dados que serão exportados POR PLANILHA a partir da ITable de ordenação final (lt_bkg_wsheet_sortorder) [Cenário de exportação VIA EXECUÇÃO BACKGROUND e POR PLANILHA]
+*    IF lt_bkg_wsheet_sortorder[] IS NOT INITIAL.
+*      SORT gcol_operacoesout[] BY (lt_bkg_wsheet_sortorder).      " Sintaxe SORT com ITable do tipo abap_sortorder_tab declarada
+*    ENDIF.
+
+    LOOP AT gt_data INTO DATA(ls_aux_doc) WHERE selected = 'X'.
+      CLEAR: v_name_ope, lc_txt_str, lc_cont.
+
+      MOVE-CORRESPONDING ls_aux_doc TO it_excel_doc.
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      " TEXTO LONGO
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      CLEAR it_excel_doc-txt_longo.
+
+*      IF it_aux_c-char01 IS NOT INITIAL AND gv_export_wsheet_ltext = ABAP_TRUE.
+*        CONCATENATE sy-mandt it_aux_c-rueck it_aux_c-rmzhl INTO v_name_con.
+
+      v_name_doc = ls_aux_doc-mdocm.
+
+      CALL FUNCTION 'READ_TEXT'
+        EXPORTING
+          id                      = 'LTXT'
+          language                = sy-langu
+          name                    = v_name_doc
+          object                  = 'IMRG'
+        TABLES
+          lines                   = ti_lines
+        EXCEPTIONS
+          id                      = 1
+          language                = 2
+          name                    = 3
+          not_found               = 4
+          object                  = 5
+          reference_check         = 6
+          wrong_access_to_archive = 7
+          OTHERS                  = 8.
+
+      IF sy-subrc <> 0.
+*          MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*          WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+      ELSE.
+        CLEAR lc_txt_str.
+
+        LOOP AT ti_lines.
+
+*          IF lc_cont < 150. teste ewxx
+            CONCATENATE lc_txt_str ti_lines-tdline cl_abap_char_utilities=>cr_lf INTO lc_txt_str.
+*            lc_cont = lc_cont + 1.
+*          ENDIF.
+
+        ENDLOOP.
+        CLEAR lc_cont.
+      ENDIF.
+      it_excel_doc-txt_longo = lc_txt_str.
+*      ENDIF.
+
+      APPEND it_excel_doc.
+    ENDLOOP.
+
+    obj_xml->export_to_wsheet( it_excel_doc[] ).
+
+    CLEAR: it_excel_doc. REFRESH: it_excel_doc.
+
+** FIM - 23.08.2021 17:10:13 - ABAPD94R
+
+    " ..........................................................................
+    " ORDENS ou Demandas:ORDENS sem Nota e sem Medida (dy_dor)
+    " ..........................................................................
+** INÍCIO - 23.08.2021 17:11:27 - ABAPD94R
+*  IF ( rb_order = 'X' ). " OR ( rb_dem = 'X' AND dy_dor = 'X' ).                " ### REMOÇÃO tipo DEMANDAS (rb_dem) - INÍCIO e FIM ###
+  ELSEIF ( rb_order = 'X' ). " OR ( rb_dem = 'X' AND dy_dor = 'X' ).                " ### REMOÇÃO tipo DEMANDAS (rb_dem) - INÍCIO e FIM ###
+* * FIM - 23.08.2021 17:11:27 - ABAPD94R
+    CLEAR: it_excel_o, it_aux_o, ti_lines.
+
+    " Ordena a ITable dos dados que serão exportados POR PLANILHA a partir da ITable de ordenação final (lt_bkg_wsheet_sortorder) [Cenário de exportação VIA EXECUÇÃO BACKGROUND e POR PLANILHA]
+    IF lt_bkg_wsheet_sortorder[] IS NOT INITIAL.
+      SORT gcol_orderout[] BY (lt_bkg_wsheet_sortorder).      " Sintaxe SORT com ITable do tipo abap_sortorder_tab declarada
+    ENDIF.
+
+    LOOP AT gcol_orderout INTO it_aux_o WHERE selected = 'X'.
+      CLEAR: v_name_order, lc_txt_str, lc_cont.
+
+      MOVE-CORRESPONDING it_aux_o TO it_excel_o.
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      " TEXTO LONGO DA ORDEM
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      CLEAR it_excel_o-txt_longo.
+
+      " Se a Ordem tem texto longo e se for exportação POR PLANILHA COM TEXTO LONGO (TRUE), busca e armazena o texto longo na planilha a ser exportada
+      IF it_aux_o-ltext IS NOT INITIAL AND gv_export_wsheet_ltext = abap_true.
+        CONCATENATE sy-mandt it_aux_o-aufnr INTO v_name_order.
+
+        CALL FUNCTION 'READ_TEXT'
+          EXPORTING
+            id                      = 'KOPF'
+            language                = sy-langu
+            name                    = v_name_order
+            object                  = 'AUFK'
+          TABLES
+            lines                   = ti_lines
+          EXCEPTIONS
+            id                      = 1
+            language                = 2
+            name                    = 3
+            not_found               = 4
+            object                  = 5
+            reference_check         = 6
+            wrong_access_to_archive = 7
+            OTHERS                  = 8.
+
+        IF sy-subrc <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*         WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+        ELSE.
+          CLEAR lc_txt_str.
+          LOOP AT ti_lines.
+
+*            IF lc_cont < 150. TESTE EWXX
+*              CONCATENATE lc_txt_str ti_lines-tdline cl_abap_char_utilities=>cr_lf INTO lc_txt_str.
+*              lc_cont = lc_cont + 1.
+              CONCATENATE lc_txt_str ti_lines-tdline cl_abap_char_utilities=>cr_lf INTO lc_txt_str.
+
+          ENDLOOP.
+          CLEAR lc_cont.
+        ENDIF.
+        it_excel_o-txt_longo = lc_txt_str.
+      ENDIF.
+
+      APPEND it_excel_o.
+    ENDLOOP.
+
+    obj_xml->export_to_wsheet( it_excel_o[] ).
+
+    CLEAR: it_excel_o. REFRESH: it_excel_o.
+
+
+    " ..........................................................................
+    " NOTAS ou Demandas:NOTAS sem Medida e sem Ordem (dy_dnt)
+    " ..........................................................................
+  ELSEIF ( rb_note = 'X' ). " OR ( rb_dem = 'X' AND dy_dnt = 'X' ).             " ### REMOÇÃO tipo DEMANDAS (rb_dem) - INÍCIO e FIM ###
+    CLEAR: it_excel_n, it_aux_n, ti_lines.
+
+    " Ordena a ITable dos dados que serão exportados POR PLANILHA a partir da ITable de ordenação final (lt_bkg_wsheet_sortorder) [Cenário de exportação VIA EXECUÇÃO BACKGROUND e POR PLANILHA]
+    IF lt_bkg_wsheet_sortorder[] IS NOT INITIAL.
+      SORT gcol_noteout[] BY (lt_bkg_wsheet_sortorder).      " Sintaxe SORT com ITable do tipo abap_sortorder_tab declarada
+    ENDIF.
+
+    LOOP AT gcol_noteout INTO it_aux_n WHERE selected = 'X'.
+      CLEAR: v_name_order, lc_txt_str, lc_cont.
+
+      MOVE-CORRESPONDING it_aux_n TO it_excel_n.
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      " TEXTO LONGO DA NOTA
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      CLEAR it_excel_n-txt_longo.
+
+      " Se a Nota tem texto longo e se for exportação POR PLANILHA COM TEXTO LONGO (TRUE), busca e armazena o texto longo na planilha a ser exportada
+      IF it_aux_n-indtx IS NOT INITIAL AND gv_export_wsheet_ltext = abap_true.
+*           CONCATENATE SY-MANDT IT_AUX_N-QMNUM INTO V_NAME_ORDER.
+        v_name_order = it_aux_n-qmnum.
+        CALL FUNCTION 'READ_TEXT'
+          EXPORTING
+            id                      = 'LTXT'
+            language                = sy-langu
+            name                    = v_name_order
+            object                  = 'QMEL'
+          TABLES
+            lines                   = ti_lines
+          EXCEPTIONS
+            id                      = 1
+            language                = 2
+            name                    = 3
+            not_found               = 4
+            object                  = 5
+            reference_check         = 6
+            wrong_access_to_archive = 7
+            OTHERS                  = 8.
+        IF sy-subrc <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*         WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+        ELSE.
+          CLEAR lc_txt_str.
+          LOOP AT ti_lines.
+
+*            IF lc_cont < 150. teste ewxx
+              CONCATENATE lc_txt_str ti_lines-tdline cl_abap_char_utilities=>cr_lf INTO lc_txt_str.
+*              lc_cont = lc_cont + 1.
+*            ENDIF.
+
+          ENDLOOP.
+          CLEAR lc_cont.
+        ENDIF.
+        it_excel_n-txt_longo = lc_txt_str.
+      ENDIF.
+
+      APPEND it_excel_n.
+    ENDLOOP.
+
+    obj_xml->export_to_wsheet( it_excel_n[] ).
+
+    CLEAR: it_excel_n. REFRESH: it_excel_n.
+
+
+    " ..........................................................................
+    " MEDIDAS ou Demandas:NOTAS E MEDIDAS com Ordem associada (dy_dme)
+    " ..........................................................................
+  ELSEIF ( rb_med = 'X' ). " OR ( rb_dem = 'X' AND dy_dme = 'X' ).              " ### REMOÇÃO tipo DEMANDAS (rb_dem) - INÍCIO e FIM ###
+    CLEAR: it_excel_m, it_aux_m, ti_lines.
+
+    " Ordena a ITable dos dados que serão exportados POR PLANILHA a partir da ITable de ordenação final (lt_bkg_wsheet_sortorder) [Cenário de exportação VIA EXECUÇÃO BACKGROUND e POR PLANILHA]
+    IF lt_bkg_wsheet_sortorder[] IS NOT INITIAL.
+      SORT gcol_medout[] BY (lt_bkg_wsheet_sortorder).      " Sintaxe SORT com ITable do tipo abap_sortorder_tab declarada
+    ENDIF.
+
+    LOOP AT gcol_medout INTO it_aux_m WHERE selected = 'X'.
+      CLEAR: v_name_order, lc_txt_str, lc_cont.
+
+      MOVE-CORRESPONDING it_aux_m TO it_excel_m.
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      " TEXTO LONGO DA MEDIDA/RTI
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      CLEAR it_excel_m-txt_longo.
+      " Se a Medida tem texto longo e se for exportação POR PLANILHA COM TEXTO LONGO (TRUE), busca e armazena o texto longo na planilha a ser exportada
+      IF it_aux_m-indtx IS NOT INITIAL AND gv_export_wsheet_ltext = abap_true.
+        CONCATENATE it_aux_m-qmnum it_aux_m-m_manum INTO v_name_order.
+
+        CALL FUNCTION 'READ_TEXT'
+          EXPORTING
+            id                      = 'LTXT'
+            language                = sy-langu
+            name                    = v_name_order
+            object                  = 'QMSM'
+          TABLES
+            lines                   = ti_lines
+          EXCEPTIONS
+            id                      = 1
+            language                = 2
+            name                    = 3
+            not_found               = 4
+            object                  = 5
+            reference_check         = 6
+            wrong_access_to_archive = 7
+            OTHERS                  = 8.
+        IF sy-subrc <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*         WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+        ELSE.
+          CLEAR lc_txt_str.
+          LOOP AT ti_lines.
+
+*            IF lc_cont < 150. teste ewxx
+              CONCATENATE lc_txt_str ti_lines-tdline cl_abap_char_utilities=>cr_lf INTO lc_txt_str.
+*              lc_cont = lc_cont + 1.
+*            ENDIF.
+
+          ENDLOOP.
+          it_excel_m-txt_longo = lc_txt_str. " amss 16/10/2023
+          CLEAR lc_cont.
+        ENDIF.
+*        APPEND it_excel_m.
+      ENDIF. " amss
+*--- Inicio amss 15/10/2023 --*
+
+*types: begin of ty_qmma,
+*       qmnum type qmnum,
+*       fenum type fenum,
+*      end of ty_qmma.
+      DATA: BEGIN OF it_qmma OCCURS 100,
+              qmnum LIKE qmma-qmnum,
+              fenum LIKE qmma-fenum,
+              manum LIKE qmma-manum. " amss 13/12/2023
+      DATA: END OF it_qmma.
+
+      DATA: BEGIN OF it_qmfe OCCURS 100,
+              qmnum LIKE qmfe-qmnum,
+              fenum LIKE qmfe-fenum.
+      DATA: END OF it_qmfe.
+
+*
+*data: it_qmma type table of ty_qmma.
+
+      SELECT qmnum, fenum, manum FROM qmma INTO TABLE @it_qmma
+      WHERE qmnum = @it_aux_m-qmnum
+      AND indtx = 'X'.
+
+      SELECT qmnum, fenum FROM qmfe INTO TABLE @it_qmfe
+     WHERE qmnum = @it_aux_m-qmnum
+     AND indtx = 'X'.
+
+
+      IF it_aux_m-b_indtx IS NOT INITIAL AND gv_export_wsheet_ltext = abap_true.
+
+        READ TABLE it_qmma INTO DATA(ls_qmma) WITH KEY qmnum =  it_aux_m-qmnum
+                                                       fenum = it_aux_m-m_fenum" AÇÃO
+                                                       manum = it_aux_m-a_manum. " amss 13/12/2023 " AÇÃO
+
+
+*          CONCATENATE it_aux_m-qmnum v_fenum INTO v_name_order.
+
+*          CONCATENATE it_aux_m-qmnum it_aux_m-m_manum INTO v_name_order. " AÇÃO amss 14/12/2023
+        CONCATENATE it_aux_m-qmnum it_aux_m-a_manum INTO v_name_order.  " AÇÃO  amss 14/12/2023
+        REFRESH ti_lines. CLEAR: ti_lines.
+        CALL FUNCTION 'READ_TEXT'
+          EXPORTING
+            id                      = 'LTXT'
+            language                = sy-langu
+            name                    = v_name_order
+            object                  = 'QMMA'
+          TABLES
+            lines                   = ti_lines
+          EXCEPTIONS
+            id                      = 1
+            language                = 2
+            name                    = 3
+            not_found               = 4
+            object                  = 5
+            reference_check         = 6
+            wrong_access_to_archive = 7
+            OTHERS                  = 8.
+        IF sy-subrc <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*         WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+        ELSE.
+          CLEAR lc_txt_str.
+          LOOP AT ti_lines.
+
+*            IF lc_cont < 150. teste ewxx
+              CONCATENATE lc_txt_str ti_lines-tdline cl_abap_char_utilities=>cr_lf INTO lc_txt_str.
+*              lc_cont = lc_cont + 1.
+*            ENDIF.
+
+          ENDLOOP.
+          it_excel_m-txt_longo_a = lc_txt_str. " amss 16/10/2023
+          CLEAR lc_cont.
+*            APPEND it_excel_m.
+        ENDIF.
+
+      ENDIF. " amss
+
+      IF it_aux_m-a_indtx IS NOT INITIAL AND gv_export_wsheet_ltext = abap_true.
+
+        READ TABLE it_qmfe INTO DATA(ls_qmfe) WITH KEY qmnum =  it_aux_m-qmnum
+                                                       fenum = it_aux_m-m_fenum.
+
+        v_tabix = sy-tabix.
+        CONCATENATE it_aux_m-qmnum ls_qmfe-fenum INTO v_name_order.
+
+*        concatenate it_aux_m-qmnum it_aux_m-m_manum into v_name_order.
+        REFRESH ti_lines. CLEAR: ti_lines.
+
+        CALL FUNCTION 'READ_TEXT'
+          EXPORTING
+            id                      = 'LTXT'
+            language                = sy-langu
+            name                    = v_name_order
+            object                  = 'QMFE'
+          TABLES
+            lines                   = ti_lines
+          EXCEPTIONS
+            id                      = 1
+            language                = 2
+            name                    = 3
+            not_found               = 4
+            object                  = 5
+            reference_check         = 6
+            wrong_access_to_archive = 7
+            OTHERS                  = 8.
+        IF sy-subrc <> 0.
+* MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*         WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+        ELSE.
+          CLEAR lc_txt_str.
+          LOOP AT ti_lines.
+
+*            IF lc_cont < 150. Tesre ewxx
+              CONCATENATE lc_txt_str ti_lines-tdline cl_abap_char_utilities=>cr_lf INTO lc_txt_str.
+*              lc_cont = lc_cont + 1.
+*            ENDIF.
+
+          ENDLOOP.
+          it_excel_m-txt_longo_p = lc_txt_str. " amss 16/10/2023
+          CLEAR: lc_cont.
+        ENDIF.
+      ENDIF.
+
+*-- final  amss 15/10/2023 --*
+
+
+      APPEND it_excel_m.
+      CLEAR:  it_excel_m.
+      CLEAR: it_aux_m.
+    ENDLOOP.
+*    DELETE ADJACENT DUPLICATES FROM it_excel_m COMPARING qmnum m_fenum a_qmanum a_indtx b_indtx. " amss 23/10/2023
+    obj_xml->export_to_wsheet( it_excel_m[] ).
+
+    CLEAR: it_excel_m. REFRESH: it_excel_m.
+
+    " ..........................................................................
+    " OPERAÇÕES
+    " ..........................................................................
+  ELSEIF rb_ope = 'X'.
+    CLEAR: it_excel_p, it_aux_p, ti_lines.
+
+    " Ordena a ITable dos dados que serão exportados POR PLANILHA a partir da ITable de ordenação final (lt_bkg_wsheet_sortorder) [Cenário de exportação VIA EXECUÇÃO BACKGROUND e POR PLANILHA]
+    IF lt_bkg_wsheet_sortorder[] IS NOT INITIAL.
+      SORT gcol_operacoesout[] BY (lt_bkg_wsheet_sortorder).      " Sintaxe SORT com ITable do tipo abap_sortorder_tab declarada
+    ENDIF.
+
+    LOOP AT gcol_operacoesout INTO it_aux_p WHERE selected = 'X'.
+      CLEAR: v_name_ope, lc_txt_str, lc_cont.
+
+      MOVE-CORRESPONDING it_aux_p TO it_excel_p.
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      " TEXTO LONGO DA MEDIDA/RTI
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      CLEAR it_excel_p-txt_longo.
+
+      " Se a Operação tem texto longo e se for exportação POR PLANILHA COM TEXTO LONGO (TRUE), busca e armazena o texto longo na planilha a ser exportada
+      IF it_aux_p-char01 IS NOT INITIAL AND gv_export_wsheet_ltext = abap_true.
+        CONCATENATE sy-mandt it_aux_p-aufpl it_aux_p-aplzl INTO v_name_ope.
+
+        CALL FUNCTION 'READ_TEXT'
+          EXPORTING
+            id                      = 'AVOT'
+            language                = sy-langu
+            name                    = v_name_ope
+            object                  = 'AUFK'
+          TABLES
+            lines                   = ti_lines
+          EXCEPTIONS
+            id                      = 1
+            language                = 2
+            name                    = 3
+            not_found               = 4
+            object                  = 5
+            reference_check         = 6
+            wrong_access_to_archive = 7
+            OTHERS                  = 8.
+
+        IF sy-subrc <> 0.
+*          MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*          WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+        ELSE.
+          CLEAR lc_txt_str.
+
+          LOOP AT ti_lines.
+
+*            IF lc_cont < 150.
+              CONCATENATE lc_txt_str ti_lines-tdline cl_abap_char_utilities=>cr_lf INTO lc_txt_str.
+*              lc_cont = lc_cont + 1.
+*            ENDIF.
+
+          ENDLOOP.
+          CLEAR lc_cont.
+        ENDIF.
+        it_excel_p-txt_longo = lc_txt_str.
+      ENDIF.
+
+      APPEND it_excel_p.
+    ENDLOOP.
+
+    obj_xml->export_to_wsheet( it_excel_p[] ).
+
+    CLEAR: it_excel_p. REFRESH: it_excel_p.
+
+** INÍCIO - 11.08.2021 17:11:16 - ABAPD94R
+
+    " ..........................................................................
+    " CONFIRMAÇÃO
+    " ..........................................................................
+  ELSEIF rb_con = 'X'.
+    CLEAR: it_excel_c, ti_lines.
+
+*    " Ordena a ITable dos dados que serão exportados POR PLANILHA a partir da ITable de ordenação final (lt_bkg_wsheet_sortorder) [Cenário de exportação VIA EXECUÇÃO BACKGROUND e POR PLANILHA]
+*    IF lt_bkg_wsheet_sortorder[] IS NOT INITIAL.
+*      SORT gcol_operacoesout[] BY (lt_bkg_wsheet_sortorder).      " Sintaxe SORT com ITable do tipo abap_sortorder_tab declarada
+*    ENDIF.
+
+    LOOP AT gcol_confirmacaoout INTO DATA(it_aux_c) WHERE selected2 = 'X'.
+      CLEAR: v_name_ope, lc_txt_str, lc_cont.
+
+      MOVE-CORRESPONDING it_aux_c TO it_excel_c.
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      " TEXTO LONGO
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      CLEAR it_excel_c-txt_longo.
+
+*      IF it_aux_c-char01 IS NOT INITIAL AND gv_export_wsheet_ltext = ABAP_TRUE.
+      CONCATENATE sy-mandt it_aux_c-rueck it_aux_c-rmzhl INTO v_name_con.
+
+      CALL FUNCTION 'READ_TEXT'
+        EXPORTING
+          id                      = 'RMEL'
+          language                = sy-langu
+          name                    = v_name_con
+          object                  = 'AUFK'
+        TABLES
+          lines                   = ti_lines
+        EXCEPTIONS
+          id                      = 1
+          language                = 2
+          name                    = 3
+          not_found               = 4
+          object                  = 5
+          reference_check         = 6
+          wrong_access_to_archive = 7
+          OTHERS                  = 8.
+
+      IF sy-subrc <> 0.
+*          MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*          WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+      ELSE.
+        CLEAR lc_txt_str.
+
+        LOOP AT ti_lines.
+
+*          IF lc_cont < 150. teste ewxx
+            CONCATENATE lc_txt_str ti_lines-tdline cl_abap_char_utilities=>cr_lf INTO lc_txt_str.
+*            lc_cont = lc_cont + 1.
+*          ENDIF.
+
+        ENDLOOP.
+        CLEAR lc_cont.
+      ENDIF.
+      it_excel_c-txt_longo = lc_txt_str.
+*      ENDIF.
+
+      APPEND it_excel_c.
+    ENDLOOP.
+
+    obj_xml->export_to_wsheet( it_excel_c[] ).
+
+    CLEAR: it_excel_c. REFRESH: it_excel_c.
+** FIM - 11.08.2021 17:11:16 - ABAPD94R
+  ELSEIF rb_lis = 'X'.
+    CLEAR: it_excel_l, ti_lines.
+
+    DATA: BEGIN OF texto,
+            mandt	TYPE mandt,
+            plnty	TYPE plnty,
+            plnnr	TYPE plnnr,
+            plnal	TYPE plnal,
+            zaehl	TYPE cim_count,
+          END OF texto.
+*    " Ordena a ITable dos dados que serão exportados POR PLANILHA a partir da ITable de ordenação final (lt_bkg_wsheet_sortorder) [Cenário de exportação VIA EXECUÇÃO BACKGROUND e POR PLANILHA]
+*    IF lt_bkg_wsheet_sortorder[] IS NOT INITIAL.
+*      SORT gcol_operacoesout[] BY (lt_bkg_wsheet_sortorder).      " Sintaxe SORT com ITable do tipo abap_sortorder_tab declarada
+*    ENDIF.
+
+    LOOP AT gcol_listaout INTO DATA(it_aux_l) WHERE selected = 'X'.
+      CLEAR: v_name_ope, lc_txt_str, lc_cont.
+
+      MOVE-CORRESPONDING it_aux_l TO it_excel_l.
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      " TEXTO LONGO
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      CLEAR: it_excel_l-txt_longo, texto.
+
+      texto-mandt = sy-mandt.
+      texto-plnal = it_aux_l-plnal.
+      texto-plnnr = it_aux_l-plnnr.
+      texto-plnty = it_aux_l-plnty.
+      texto-zaehl = it_aux_l-zaehl.
+*      IF it_aux_l-char01 IS NOT INITIAL AND gv_export_wsheet_ltext = ABAP_TRUE.
+
+      v_name_con = texto." separated by space.
+
+      CALL FUNCTION 'READ_TEXT'
+        EXPORTING
+          id                      = 'PLKO'
+          language                = sy-langu
+          name                    = v_name_con
+          object                  = 'ROUTING'
+        TABLES
+          lines                   = ti_lines
+        EXCEPTIONS
+          id                      = 1
+          language                = 2
+          name                    = 3
+          not_found               = 4
+          object                  = 5
+          reference_check         = 6
+          wrong_access_to_archive = 7
+          OTHERS                  = 8.
+
+      IF sy-subrc <> 0.
+*          MESSAGE ID SY-MSGID TYPE SY-MSGTY NUMBER SY-MSGNO
+*          WITH SY-MSGV1 SY-MSGV2 SY-MSGV3 SY-MSGV4.
+      ELSE.
+        CLEAR lc_txt_str.
+
+        LOOP AT ti_lines.
+
+*          IF lc_cont < 150. teste ewxx
+            CONCATENATE lc_txt_str ti_lines-tdline cl_abap_char_utilities=>cr_lf INTO lc_txt_str.
+*            lc_cont = lc_cont + 1.
+*          ENDIF.
+
+        ENDLOOP.
+        CLEAR lc_cont.
+      ENDIF.
+      it_excel_l-txt_longo = lc_txt_str.
+*      ENDIF.
+
+      APPEND it_excel_l.
+    ENDLOOP.
+
+    obj_xml->export_to_wsheet( it_excel_l[] ).
+
+    CLEAR: it_excel_l. REFRESH: it_excel_l.
+  ELSEIF rb_trf EQ 'X'.
+
+    CLEAR: it_excel_t, ti_lines.
+
+    DATA: BEGIN OF texto1,
+            mandt	TYPE mandt,
+            plnty	TYPE plnty,
+            plnnr	TYPE plnnr,
+            plnkn	TYPE plnkn,
+            zaehl	TYPE cim_count,
+          END OF texto1.
+*    " Ordena a ITable dos dados que serão exportados POR PLANILHA a partir da ITable de ordenação final (lt_bkg_wsheet_sortorder) [Cenário de exportação VIA EXECUÇÃO BACKGROUND e POR PLANILHA]
+*    IF lt_bkg_wsheet_sortorder[] IS NOT INITIAL.
+*      SORT gcol_operacoesout[] BY (lt_bkg_wsheet_sortorder).      " Sintaxe SORT com ITable do tipo abap_sortorder_tab declarada
+*    ENDIF.
+    LOOP AT gcol_trfout INTO DATA(it_trf_l) WHERE selected = 'X'.
+      CLEAR: v_name_ope, lc_txt_str, lc_cont.
+
+      MOVE-CORRESPONDING it_trf_l TO it_excel_t.
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      " TEXTO LONGO
+      " ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      CLEAR: it_excel_t-txt_longo, texto.
+
+
+      texto1-mandt  = sy-mandt.
+      texto1-plnty  = it_trf_l-plnty.
+      texto1-plnnr  = it_trf_l-plnnr.
+      texto1-plnkn  = it_trf_l-plnkn.
+      texto1-zaehl  = it_trf_l-zaehl.
+*      IF it_aux_l-char01 IS NOT INITIAL AND gv_export_wsheet_ltext = ABAP_TRUE.
+
+      v_name_trf = texto1." separated by space.
+
+      CALL FUNCTION 'READ_TEXT'
+        EXPORTING
+          id                      = 'PLPO'
+          language                = sy-langu
+          name                    = v_name_trf
+          object                  = 'ROUTING'
+        TABLES
+          lines                   = ti_lines
+        EXCEPTIONS
+          id                      = 1
+          language                = 2
+          name                    = 3
+          not_found               = 4
+          object                  = 5
+          reference_check         = 6
+          wrong_access_to_archive = 7
+          OTHERS                  = 8.
+
+      IF sy-subrc <> 0.
+        CLEAR it_excel_t-char01.
+      ELSE.
+        CLEAR lc_txt_str.
+
+        LOOP AT ti_lines.
+
+*          IF lc_cont < 150. teste ewxx
+            CONCATENATE lc_txt_str ti_lines-tdline cl_abap_char_utilities=>cr_lf INTO lc_txt_str.
+*            lc_cont = lc_cont + 1.
+*         ENDIF.
+
+        ENDLOOP.
+        CLEAR lc_cont.
+      ENDIF.
+      it_excel_t-txt_longo = lc_txt_str.
+*      ENDIF.
+
+      APPEND it_excel_t.
+    ENDLOOP.
+
+    obj_xml->export_to_wsheet( it_excel_t[] ).
+
+    CLEAR: it_excel_t. REFRESH: it_excel_t.
+
+  ENDIF.
+
+ENDFORM.                    " CRIA_PLANILHA
