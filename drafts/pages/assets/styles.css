@@ -18,5 +18,11 @@ p {
     font-style: italic;
     color: rgb(92, 90, 90);
     text-shadow: 1px;
-    
+    font-size: 12px
+}
+.BoxCitacao {
+    border: 1px solid coral;
+    padding: 1%;
+    margin: 1%;
+    box-shadow: 0px 0px 10px coral
 }
