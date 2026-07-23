@@ -1,3 +1,7 @@
+/*Variáveis não podem iniciar com números, não podem conter espaços e não podem ser palavras reservadas do JavaScript.
+Além disso, são case sensitive, ou seja, diferenciam maiúsculas de minúsculas. nomeCliente é diferente de nomecliente, por exemplo.
+Preferencialmente usar o camelCase para nomear variáveis, funções e métodos. Para classes, usar PascalCase.*/
+
 let nomeCompleto = 'Luis';
 let Nomecompleto = 'Henrique';
 
