@@ -16,5 +16,3 @@ Notnumber.innerHTML = Number.isNaN(Number(numero));
 baixo.innerHTML = Math.floor(Number(numero));
 cima.innerHTML = Math.ceil(Number(numero));
 duas.innerHTML = Number(numero).toFixed(2);
-
-
