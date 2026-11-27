@@ -11,3 +11,6 @@ const raiz = function (n) {
 };
 
 console.log(raiz(9));
+
+const raiz2 = n => n ** 0.5; // Arrow function
+console.log(raiz2(16));
